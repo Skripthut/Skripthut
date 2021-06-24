@@ -12,3 +12,7 @@ Format the same for nested JSON.
 #
 #### **To-Do:**
 > Change discord.json to maps??
+> Change discord.json to a database
+> Finish /role Command
+> Finish /reactionrole Command
+> Add /send Command
