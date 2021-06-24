@@ -11,6 +11,7 @@ Array.prototype.getRandomElement = function() {
 **/
 const Discord = require(`discord.js`);
 const fs = require(`fs-extra`);
+const { PassThrough, Writable } = require('stream');
 
 var clientData = loadJSON('./discord/client.json');
 
@@ -20,10 +21,7 @@ var discord = loadJSON('./discord/discord.json');
 var skripthut = "https://i.imgur.com/ocMfwH5.png";
 
 /**
- * The ReactionRoleEmote class made for reaction roles.
- * 
- * @constructor Create a ReactionRoleEmote using a Message and Role/Role ID.
- * @method setRole() Change the role of a ReactionRoleEmote.
+ * The ReactionRoleEmote class for reaction roles.
 **/
 class ReactionRoleEmote {
 	/**
@@ -33,24 +31,50 @@ class ReactionRoleEmote {
 	 * @param {(Discord.Snowflake | Discord.Role)} role The specified Role or Role ID Snowflake of the ReactionRoleEmote.
 	**/
 	constructor(message, role) {
+		/**
+		 * The ID of the reaction role message
+		 * @type {Discord.Snowflake}
+		**/
 		this.id = message.id;
-		/** @type {String} */
+		/**
+		 * The ID of the reaction role message's channel
+		 * @type {Discord.Snowflake}
+		**/
 		this.channel = message.channel.id;
+		/**
+		 * The ID of the reaction role message's guild
+		 * @type {Discord.Snowflake}
+		**/
 		this.guild = message.guild.id;
 
-		if (message.guild.roles.cache.get(role)) { this.role = role; }
-		else if ((role.constructor || {}).name === 'Role') { this.role = role.id; }
-		else { throw new Error('Given role parameter is not a valid role ID or Role') }
+		var roleId;
+		if (message.guild.roles.cache.get(role)) { roleId = role; }
+		else if ((role.constructor || {}).name === 'Role') { roleId = role.id; }
+		else { throw new Error('Given role parameter is not a valid role ID or Role'); }
+
+		/**
+		 * The ID of the reaction role
+		 * @type {Discord.Snowflake}
+		**/
+		this.role = roleId;
 	}
 	/**
 	 * Change the role of a ReactionRoleEmote.
 	 *
-	 * @param {(Discord.Snowflake | Discord.Role)} role The desired Role or Role ID Snowflake to change this's role property to.
+	 * @param {(Discord.Snowflake | Discord.Role)} role The desired Role or Role ID Snowflake to change the role property of this to.
 	**/
-	setRole(role) {
-		if (message.guild.cache.get(role)) { this.role = role; }
-		else if (role.constructor.name === 'Role') { this.role = role.id; }
+	set setRole(role) {
+		var roleId = this.role;
+
+		if (message.guild.cache.get(role)) { roleId = role; }
+		else if (role.constructor.name === 'Role') { roleId = role.id; }
 		else { throw new Error('Given role parameter is not a valid role ID or Role') }
+
+		/**
+		 * The ID of the reaction role
+		 * @type {Discord.Snowflake}
+		**/
+		this.id = roleId;
 	}
 }
 
@@ -171,18 +195,40 @@ client.on('ready', async () => {
 		const { name, options } = interaction.data;
 		const command = name.toLowerCase();
 
+		/**
+		 * The ID of the guild of the interaction
+		 * @type {Discord.Snowflake}
+		**/
 		const guild_id = interaction.guild_id;
 		/**
+		 * The guild of the interaction
 		 * @type {Discord.Guild}
 		**/
 		const guild = client.guilds.cache.get(guild_id);
 
+		/**
+		 * The ID of the channel of the interaction
+		 * @type {Discord.Snowflake}
+		**/
 		const channel_id = interaction.channel_id;
+		/**
+		 * The channel of the interaction
+		 * @type {Discord.TextChannel} 
+		**/
 		const channel = guild.channels.cache.get(channel_id);
 
+		/**
+		 * The ID of the user who created this interaction
+		 * @type {Discord.Snowflake}
+		**/
 		const user_id = interaction.member.user.id;
+		/**
+		 * The user who created this interaction
+		 * @type {Discord.User}
+		**/
 		const user = client.users.cache.get(user_id);
 
+		/** The GuildMember version of the user who created the interaction **/
 		const member = guild.member(user);
 
 		const args = {};
@@ -288,28 +334,39 @@ client.on('ready', async () => {
 							id: message.id,
 							emotes: {}
 						}
-						discord.reactionRoleMessages[message.id].emotes[reactionRoleEmoteId] = new ReactionRoleEmote(message, reactionRole);
+						discord.reactionRoleMessages[message.id].emotes[reactionRoleEmoteId] =
+							new ReactionRoleEmote(message, reactionRole);
 					});
 					break;
 				}
 
 				if (type === 'add') {
-					var reactionRoleChannel = guild.channels.cache.get(option.options[0].value);
-					var reactionRoleMessageId = option.options[1].value;
+					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
+
+					if (ids[1] !== guild_id) {
+						reply(interaction, `That's not a valid message URL (guild ID invalid)!`);
+						break;
+					}
+					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
+					if (!reactionRoleChannel) {
+						reply(interaction, `That's not a valid message URL (channel ID invalid)!`);
+						break;
+					}
+					var reactionRoleMessageId = ids[3];
 					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
 					if (!reactionRoleMessage) {
-						reply(interaction, `That's not a valid message ID!`);
+						reply(interaction, `That's not a valid message URL (message ID invalid)!`);
 						break;
 					}
 
-					var chosenEmote = (option.options[2] || { value: '📰' }).value;
+					var chosenEmote = (option.options[1] || { value: '📰' }).value;
 
 					if (chosenEmote.match(/\p{Extended_Pictographic}/u)) {
 						var reactionRoleEmote = chosenEmote;
 						var reactionRoleEmoteId = chosenEmote;
 					}
 					else {
-						var reactionRoleEmote = client.emojis.cache.find(emote => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: '' };
+						var reactionRoleEmote = client.emojis.cache.find(emote => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: null };
 						var reactionRoleEmoteId = reactionRoleEmote.id;
 					}
 
@@ -318,7 +375,7 @@ client.on('ready', async () => {
 						break;
 					}
 
-					var reactionRole = option.options[3].value;
+					var reactionRole = option.options[2].value;
 
 					const _reactionRoleMessage = discord.reactionRoleMessages[reactionRoleMessageId];
 					if (_reactionRoleMessage) {
@@ -341,10 +398,67 @@ client.on('ready', async () => {
 							emotes: {}
 						}
 					}
-					discord.reactionRoleMessages[reactionRoleMessageId].emotes[reactionRoleEmoteId] = new ReactionRoleEmote(reactionRoleMessage, reactionRole);
+					discord.reactionRoleMessages[reactionRoleMessageId].emotes[reactionRoleEmoteId] =
+						new ReactionRoleEmote(reactionRoleMessage, reactionRole);
 					break;
 				}
-				reply(interaction, 'wait a bit bruh');
+
+				if (type === 'remove') {
+					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
+
+					if (ids[1] !== guild_id) {
+						reply(interaction, `That's not a valid message URL (guild ID invalid)!`);
+						break;
+					}
+					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
+					if (!reactionRoleChannel) {
+						reply(interaction, `That's not a valid message URL (channel ID invalid)!`);
+						break;
+					}
+					var reactionRoleMessageId = ids[3];
+					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
+					if (!reactionRoleMessage) {
+						reply(interaction, `That's not a valid message URL (message ID invalid)!`);
+						break;
+					}
+					
+					var _reactionRoleMessage = discord.reactionRoleMessages[reactionRoleMessageId];
+
+					if (!_reactionRoleMessage) {
+						reply(interaction, `This message doesn't have any reaction roles!`);
+						break;
+					}
+
+					var reactionRoleId = option.options[1].value;
+
+					/**
+					 * @type {ReactionRoleEmote[]}
+					**/
+					const emotes = _reactionRoleMessage.emotes;
+					const keys = Object.keys(emotes);
+					for (var i = 0; i < keys.length; i++) {
+						if (emotes[keys[i]].role === reactionRoleId) {
+							var reactionRoleEmote = keys[i];
+							delete discord.reactionRoleMessages[reactionRoleMessageId].emotes[i];
+						}
+					}
+
+					if (!keys.length) {
+						delete discord.reactionRoleMessages[reactionRoleMessageId];
+					}
+
+					if (!reactionRoleEmote) {
+						reply(interaction, `This message doesn't have that role!`);
+						break;
+					}
+
+					var reactionRole = guild.roles.cache.get(reactionRoleId);
+
+					reply(interaction, `Removing ${reactionRole} from the specified message...`);
+					reactionRoleMessage.reactions.resolve(reactionRoleEmote).remove();
+					break;
+				}
+				reply(interaction, 'bruh moment');
 				break;
 
 			/*
@@ -556,6 +670,16 @@ function getRandomInt(min, max) {
 	return Math.round(getRandom(min, max));
 }
 
+var now = (new Date).toISOString().substr(0, 10);
+if (discord.lastActivation !== now) {
+	discord.activations = 0;
+}
+discord.lastActivation = now;
+discord.activations++;
+
+//var logs = fs.createWriteStream(`./logs/${now}**${discord.activations}`);
+//logs.write('hi');
+
 client.on('raw', packet => {
     if ([ 'MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE' ].includes(packet.t)) {
     	const channel = client.channels.cache.get(packet.d.channel_id);
@@ -662,7 +786,8 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
 	const reactionRole = discord.reactionRoleMessages[message.id];
 	if (reactionRole) {
-		var reactionRoleEmote = reactionRole.emotes[reaction] || reactionRole.emotes[reaction._emoji.id];
+		var emoji = reaction._emoji;
+		var reactionRoleEmote = reactionRole.emotes[emoji.name] || reactionRole.emotes[emoji.id];
 		if (reactionRoleEmote) { member.roles.add(reactionRoleEmote.role, 'Reacted to reaction role message'); }
 		return;
 	}
@@ -677,7 +802,8 @@ client.on('messageReactionRemove', async (reaction, user) => {
 
 	const reactionRole = discord.reactionRoleMessages[message.id];
 	if (reactionRole) {
-		var reactionRoleEmote = reactionRole.emotes[reaction] || reactionRole.emotes[reaction._emoji.id];
+		var emoji = reaction._emoji;
+		var reactionRoleEmote = reactionRole.emotes[emoji.name] || reactionRole.emotes[emoji.id];
 		if (reactionRoleEmote) { member.roles.remove(reactionRoleEmote.role, 'Unreacted to reaction role message'); }
 		return;
 	}
@@ -762,17 +888,8 @@ setInterval(async function() {
 	client.guilds.cache.forEach(async guild => {
 		var clientMember = guild.member(client.user);
 		getStat(clientMember, "test");
-		/*Object.values(discord.guilds[guild.id].members).forEach(members => {
-			var keys = Object.keys(members);
-			if (!keys.length) { delete discord.guilds[guild.id].members; }
-			else {
-				for (const key of keys) {
-					const member = members[key];
-					if (!Object.keys(member).length) { delete discord.guilds[guild.id].members[member]; }
-				}
-			}
-		});*/
 	});
+
 	writeJSON('./discord/discord.json', discord);
 }, 1000);
 
