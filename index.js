@@ -266,7 +266,7 @@ client.on('ready', async () => {
 						var reactionRoleEmoteId = chosenEmote;
 					}
 					else {
-						var reactionRoleEmote = client.emojis.cache.find(emote => emote.name === chosenEmote || emote.id === chosenEmote) || { id: '' };
+						var reactionRoleEmote = client.emojis.cache.find(emote => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: '' };
 						var reactionRoleEmoteId = reactionRoleEmote.id;
 					}
 
@@ -294,6 +294,14 @@ client.on('ready', async () => {
 				}
 
 				if (type === 'add') {
+					var reactionRoleChannel = guild.channels.cache.get(option.options[0].value);
+					var reactionRoleMessageId = option.options[1].value;
+					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
+					if (!reactionRoleMessage) {
+						reply(interaction, `That's not a valid message ID!`);
+						break;
+					}
+
 					var chosenEmote = (option.options[2] || { value: '📰' }).value;
 
 					if (chosenEmote.match(/\p{Extended_Pictographic}/u)) {
@@ -301,20 +309,12 @@ client.on('ready', async () => {
 						var reactionRoleEmoteId = chosenEmote;
 					}
 					else {
-						var reactionRoleEmote = client.emojis.cache.find(emote => emote.name === chosenEmote || emote.id === chosenEmote) || { id: '' };
+						var reactionRoleEmote = client.emojis.cache.find(emote => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: '' };
 						var reactionRoleEmoteId = reactionRoleEmote.id;
 					}
 
 					if (!reactionRoleEmoteId) {
 						reply(interaction, `That's not a valid emote!`);
-						break;
-					}
-
-					var reactionRoleChannel = guild.channels.cache.get(option.options[0].value);
-					var reactionRoleMessageId = option.options[1].value;
-					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
-					if (!reactionRoleMessage) {
-						reply(interaction, `That's not a valid message ID!`);
 						break;
 					}
 

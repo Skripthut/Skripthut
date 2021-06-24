@@ -9,7 +9,7 @@
 Formatted all in order. If empty, delete object (delete `[]` and `{}`).
 
 Format the same for nested JSON.
-#
+***
 #### **To-Do:**
 > Change discord.json to maps??
 
