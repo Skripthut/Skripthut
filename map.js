@@ -1,0 +1,3 @@
+[{"type":1,"name":"create","description":"Create a colour role with a chosen HEX code","options":[{"type":3,"name":"colour","description":"Your chosen colour's HEX code","required":true}]},{"type":1,"name":"remove","description":"Remove your current colour role","options":[]}]
+
+[{"type":1,"name":"create","description":"Create a colour role with a chosen HEX code","options":[{"type":3,"name":"colour","description":"Your chosen colour's HEX code","required":true}]},{"type":1,"name":"remove","description":"Remove your current colour role"}]

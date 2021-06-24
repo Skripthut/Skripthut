@@ -1,0 +1,283 @@
+{
+    "joinMessages": [
+        "\\:O It's ${user}, thanks for joining!",
+        "Welp, here's ${user}...",
+        "Well then, ${user}'s here...",
+        "Whoa, whoa, whoa, when did ${user} get here?",
+        "Ah shoot, here comes ${user}...",
+        "And then came ${user}!"
+    ],
+    "totalRegisteredCommands": 27,
+    "tickets": {
+        "855183990533521438": {
+            "id": "855183990533521438",
+            "member": "721502393166069830",
+            "message": "855162654301225031"
+        }
+    },
+    "ticketMessages": {
+        "854967146244997140": {
+            "id": "854967146244997140",
+            "description": "Staff will be here soon! Be patient, check back in a few hours. While you're waiting, give some details about your server and maybe a few screenshots. Read the announcements for some conditions.",
+            "channel": "854840866653208608"
+        },
+        "855588971455578112": {
+            "id": "855588971455578112",
+            "description": "When you're finished the challenge, ping a staff member so they can check. Don't forget to include screenshots and source code!",
+            "channel": "855110846328864828"
+        }
+    },
+    "reactionRoleMessages": {
+        "857484227687088131": {
+            "id": "857484227687088131",
+            "emotes": {
+                "857360464329572363": {
+                    "id": "857484227687088131",
+                    "channel": "854949456108453908",
+                    "guild": "854838419677904906",
+                    "role": "854842705363992586"
+                },
+                "854850995053002793": {
+                    "id": "857484227687088131",
+                    "channel": "854949456108453908",
+                    "guild": "854838419677904906",
+                    "role": "857396679518584842"
+                }
+            }
+        }
+    },
+    "commands": [
+        {
+            "name": "close",
+            "description": "Close your current ticket channel"
+        },
+        {
+            "name": "createticket",
+            "description": "Create a ticket message in specified channel with specified description",
+            "options": [
+                {
+                    "type": 7,
+                    "name": "channel",
+                    "description": "The channel you want to send the ticket message to",
+                    "required": true
+                },
+                {
+                    "type": 3,
+                    "name": "message",
+                    "description": "The message you want to send to the channel",
+                    "required": true
+                },
+                {
+                    "type": 3,
+                    "name": "description",
+                    "description": "The description of the ticket (is sent when ticket is created)",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "reactionrole",
+            "description": "Base command for reaction role management",
+            "options": [
+                {
+                    "type": 1,
+                    "name": "create",
+                    "description": "Create a reaction role message in a specified channel with a specific emote",
+                    "options": [
+                        {
+                            "type": 7,
+                            "name": "channel",
+                            "description": "The channel you want to send the message to",
+                            "required": true
+                        },
+                        {
+                            "type": 3,
+                            "name": "message",
+                            "description": "The message you want to send to the channel",
+                            "required": true
+                        },
+                        {
+                            "type": 3,
+                            "name": "emote",
+                            "description": "The tag of an emote (i.e. '857360464329572363' or 'Skripthut' for Skripthut, or '📰' for newspaper)",
+                            "required": true
+                        },
+                        {
+                            "type": 8,
+                            "name": "role",
+                            "description": "The role you want the reaction role message to have",
+                            "required": true
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "name": "add",
+                    "description": "Add a role and reaction to a reaction role message",
+                    "options": [
+                        {
+                            "type": 7,
+                            "name": "channel",
+                            "description": "The channel of the reaction role message",
+                            "required": true
+                        },
+                        {
+                            "type": 3,
+                            "name": "id",
+                            "description": "The ID of the reaction role message you want to add the role to",
+                            "required": true
+                        },
+                        {
+                            "type": 3,
+                            "name": "emote",
+                            "description": "The tag of an emote (i.e. '857360464329572363' or 'Skripthut' for Skripthut, or '📰' for newspaper)",
+                            "required": true
+                        },
+                        {
+                            "type": 8,
+                            "name": "role",
+                            "description": "The role you want to add to the reaction role message",
+                            "required": true
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "name": "remove",
+                    "description": "Remove a role from a reaction role message",
+                    "options": [
+                        {
+                            "type": 3,
+                            "name": "id",
+                            "description": "The ID of the reaction role message you want to remove the role from",
+                            "required": true
+                        },
+                        {
+                            "type": 8,
+                            "name": "role",
+                            "description": "The role you want to remove from the reaction role message",
+                            "required": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "role",
+            "description": "Obtain information about all/specific roles, or manage the roles of a member",
+            "options": [
+                {
+                    "type": 1,
+                    "name": "roles",
+                    "description": "List all the guild's roles",
+                    "options": [
+                        {
+                            "type": 8,
+                            "name": "role",
+                            "description": "List all the details of the specified role"
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "name": "grant",
+                    "description": "Give a role to the member",
+                    "options": [
+                        {
+                            "type": 6,
+                            "name": "member",
+                            "description": "The member whom you want to add the role to",
+                            "required": true
+                        },
+                        {
+                            "type": 8,
+                            "name": "role",
+                            "description": "The role you want to give to the member",
+                            "required": true
+                        },
+                        {
+                            "type": 3,
+                            "name": "reason",
+                            "description": "The reason why you granted this role (defaults to \"Granted by [Your Tag]\")"
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "name": "revoke",
+                    "description": "Remove a role from the member",
+                    "options": [
+                        {
+                            "type": 6,
+                            "name": "member",
+                            "description": "The member whom you want to remove the role from",
+                            "required": true
+                        },
+                        {
+                            "type": 8,
+                            "name": "role",
+                            "description": "The role you want to remove from the member",
+                            "required": true
+                        },
+                        {
+                            "type": 3,
+                            "name": "reason",
+                            "description": "The reason why you removed this role (defaults to \"Removed by [Your Tag]\")"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "colourrole",
+            "description": "Base command for colour role management",
+            "options": [
+                {
+                    "type": 1,
+                    "name": "create",
+                    "description": "Create a colour role with a chosen HEX code",
+                    "options": [
+                        {
+                            "type": 3,
+                            "name": "colour",
+                            "description": "Your chosen colour's HEX code",
+                            "required": true
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "name": "remove",
+                    "description": "Remove your current colour role"
+                }
+            ]
+        },
+        {
+            "name": "deletecommands",
+            "description": "Delete all commands"
+        },
+        {
+            "name": "tomato",
+            "description": "tomato"
+        }
+    ],
+    "totalTickets": 110,
+    "guilds": {
+        "854838419677904906": {
+            "members": {
+                "854846356081475614": {},
+                "482973633002733588": {},
+                "585019061193146368": {},
+                "757655486979113093": {},
+                "506219124020609045": {},
+                "450104454193217546": {},
+                "250747216086564866": {
+                    "colourRole": "857396679518584842"
+                },
+                "365630764244664320": {},
+                "635197986774974484": {},
+                "576842567975567380": {}
+            }
+        }
+    }
+}
