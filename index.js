@@ -35,6 +35,7 @@ console.log([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ].shuffle(8)
 **/
 const Discord = require(`discord.js`);
 const fs = require(`fs-extra`);
+const _ = require('lodash');
 
 const client = new Discord.Client(/*{ ws: { intents: Discord.Intents.PRIVILEGED } }*/);
 var discord = loadJSON('./discord/discord.json');
@@ -524,7 +525,7 @@ client.on('ready', async () => {
 
 					var reactionRole = option.options[2].value;
 
-					const _reactionRoleMessage = Get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
+					const _reactionRoleMessage = _.get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
 					if (_reactionRoleMessage) {
 						const emotes = _reactionRoleMessage.emotes;
 						if (emotes[reactionRoleEmoteId]) {
@@ -540,7 +541,7 @@ client.on('ready', async () => {
 					await reply(interaction, 'Adding...');
 					await reactionRoleMessage.react(reactionRoleEmote);
 					if (!_reactionRoleMessage) {
-						Set(discord, `reactionRoleMessages.${reactionRoleMessageId}`, 
+						_.set(discord, `reactionRoleMessages.${reactionRoleMessageId}`, 
 						{
 							id: reactionRoleMessageId,
 							emotes: {}
@@ -569,7 +570,7 @@ client.on('ready', async () => {
 						break;
 					}
 
-					var _reactionRoleMessage = Get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
+					var _reactionRoleMessage = _.get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
 
 					if (!_reactionRoleMessage) {
 						reply(interaction, `This message doesn't have any reaction roles!`);
@@ -705,7 +706,7 @@ client.on('ready', async () => {
 						reply(interaction, `That's not a valid timespan (where [x] is any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`);
 						break;
 					}
-					Set(discord.guilds, `${guild_id}.members.${target.id}.banned`, {
+					_.set(discord.guilds, `${guild_id}.members.${target.id}.banned`, {
 						banDate: details.now,
 						banTime: details.milliseconds,
 						moderator: user_id
@@ -874,13 +875,16 @@ client.on('message', (message) => {
 
 client.on('messageUpdate', async (oldMessage, newMessage) => {
 	var user = newMessage.author;
+	console.log('hello');
 	if (user.bot) { return; }
+	console.log('no bot');
 	var guild = newMessage.guild;
 	var channel = newMessage.channel;
 	var oldContent = oldMessage.content;
 	var newContent = newMessage.content;
 	/** @type {Discord.TextChannel} **/
-	var logs = guild.channels.cache.get(Get(discord.guilds, `${guild.id}.message_logs`));
+	var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
+	console.log(`logs ${logs}`);
 	if (logs) {
 		var description = `📎 **${user} edited [a message](https://discord.com/channels/${guild.id}/${channel.id}/${newMessage.id}) in ${channel}.**`;
 		var descLength = description.length - 2;
@@ -904,7 +908,7 @@ client.on('messageDelete', async (message) => {
 	var channel = message.channel;
 	var content = message.content;
 	/** @type {Discord.TextChannel} **/
-	var logs = guild.channels.cache.get(Get(discord.guilds, `${guild.id}.message_logs`));
+	var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
 	if (logs) {
 		var description = `📎 **${user} deleted a message in ${channel} (ID: ${message.id}).**`;
 		var descLength = description.length - 2;
@@ -924,7 +928,7 @@ client.on('guildMemberAdd', async (member) => {
 	const user = member.user;
 	member.roles.add(skripter);
 	client.channels.cache.get('854842141498277908').send(
-		(Get(discord, `guilds.${guild.id}.joinMessages`) || [
+		(_.get(discord, `guilds.${guild.id}.joinMessages`) || [
 			"\\:O It's ${user}, thanks for joining!",
 			"Welp, here's ${user}...",
 			"Well then, ${user}'s here...",
@@ -1062,7 +1066,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 			});
 	}
 
-	const reactionRole = Get(discord, `reactionRoleMessages.${message.id}`);
+	const reactionRole = _.get(discord, `reactionRoleMessages.${message.id}`);
 	if (reactionRole) {
 		var emoji = reaction._emoji;
 		var reactionRoleEmote = reactionRole.emotes[emoji.name] || reactionRole.emotes[emoji.id];
@@ -1077,7 +1081,7 @@ client.on('messageReactionRemove', async (reaction, user) => {
 	const guild = message.guild;
 	var member = guild.member(user);
 
-	const reactionRole = Get(discord, `reactionRoleMessages.${message.id}`);;
+	const reactionRole = _.get(discord, `reactionRoleMessages.${message.id}`);;
 	if (reactionRole) {
 		var emoji = reaction._emoji;
 		var reactionRoleEmote = reactionRole.emotes[emoji.name] || reactionRole.emotes[emoji.id];
@@ -1086,101 +1090,8 @@ client.on('messageReactionRemove', async (reaction, user) => {
 });
 
 client.on('guildBanRemove', async (guild, user) => {
-	Delete(discord.guilds, `${guild.id}.members.${user.id}.banned`);
+	_.unset(discord.guilds, `${guild.id}.members.${user.id}.banned`);
 });
-
-/**
- * @param {string} path The string path of the desired value of the object
- * @returns {[string, string, {index: number}, {input: string}, {groups: undefined}][]} The Array versions of RegExp String Iterators
-**/
-function getPath(path) {
-	var objects = Array.from(path.matchAll(/((?:(?![\.[\]\d]).)+)\.?/gi));
-
-	objects.push(...Array.from(path.matchAll(/\[(\d+)\]/g)));
-	return objects.sort((a, b) => a.index - b.index);
-}
-
-/**
- * Dynamically sets a nested value in an object.
- * 
- * @param obj The object which contains the value you want to change/set.
- * @param {string} path The path to the value you want to set.
- * @param value The value you want to set it to.
- * 
- * @example
- * var object = { foo: { bar: [ 1, 2, 3, 4, 5 ] } };
- * Set(object, 'foo.bar[3]', 10);
- * 	console.log(
- * JSON.stringify(object) === JSON.stringify({ foo: { bar: [ 1, 2, 3, 10, 5 ] } })
- * ); // Logs true
-**/
-function Set(obj, path, value) {
-	var schema = obj;
-	var pList = getPath(path);
-	var len = pList.length;
-	for(var i = 0; i < len - 1; i++) {
-		var elem = pList[i];
-		var index = elem[0].includes('[') ? parseInt(elem[1]) : elem[1];
-		if(!schema[index]) { schema[index] = {}; }
-		schema = schema[index];
-	}
-
-	var elem = pList[i];
-	schema[elem[0].includes('[') ? parseInt(elem[1]) : elem[1]] = value;
-	return obj;
-}
-
-/**
- * Dynamically gets a nested value in an object.
- * 
- * @param obj The object which contains the value you want to get.
- * @param {string} path The path to the value you want to get.
- * 
- * @example
- * console.log(Get({ foo: { bar: [ 1, 2, 3, 4, 5 ] } }, 'foo.bar[3]') === 4); // Logs true
-**/
-function Get(obj, path) {
-	var schema = obj;
-	var pList = getPath(path);
-	var len = pList.length;
-	for(var i = 0; i < len - 1; i++) {
-		var elem = pList[i];
-		var index = elem[0].includes('[') ? parseInt(elem[1]) : elem[1];
-		if(!schema[index]) { return undefined; }
-		schema = schema[index];
-	}
-
-	var elem = pList[i];
-	return schema[elem[0].includes('[') ? parseInt(elem[1]) : elem[1]];
-}
-
-/**
- * Dynamically deletes a nested value in an object.
- * 
- * @param obj The object which contains the value you want to delete.
- * @param {string} path The path to the value you want to delete.
- * 
- * @example
- * var object = { foo: { bar: [ 1, 2, 3, 4, 5 ] } };
- * Delete(object, 'foo.bar[3]');
- * console.log(
- * 	JSON.stringify(object) === JSON.stringify({ foo: { bar: [ 1, 2, 10, 5 ] } })
- * ); // Logs true
-**/
-function Delete(obj, path) {
-	var schema = obj;
-	var pList = getPath(path);
-	var len = pList.length;
-	for(var i = 0; i < len - 1; i++) {
-		var elem = pList[i];
-		var index = elem[0].includes('[') ? parseInt(elem[1]) : elem[1];
-		if(!schema[index]) { return; }
-		schema = schema[index];
-	}
-
-	var elem = pList[i];
-	delete schema[elem[0].includes('[') ? parseInt(elem[1]) : elem[1]];
-}
 
 /**
  * Set a stat of a member in a guild.
@@ -1191,7 +1102,7 @@ function Delete(obj, path) {
 **/
 function setStat(member, key, value) {
 	const guild = member.guild;
-	Set(discord.guilds, `${guild.id}.members.${member.id}.${key}`, value);
+	_.set(discord.guilds, `${guild.id}.members.${member.id}.${key}`, value);
 }
 
 /**
@@ -1202,7 +1113,7 @@ function setStat(member, key, value) {
 **/
 function deleteStat(member, key) {
 	const guild = member.guild;
-	Delete(discord.guilds, `${guild.id}.members.${member.id}.${key}`);
+	_.unset(discord.guilds, `${guild.id}.members.${member.id}.${key}`);
 }
 
 /**
@@ -1214,7 +1125,7 @@ function deleteStat(member, key) {
 **/
 function getStat(member, key) {
 	const guild = member.guild;
-	return Get(discord.guilds, `${guild.id}.members.${member.id}.${key}`);
+	return _.get(discord.guilds, `${guild.id}.members.${member.id}.${key}`);
 }
 
 /**
@@ -1264,7 +1175,7 @@ async function reloadDiscordJSON() {
 		var bans = await client.guilds.cache.get(guildId).fetchBans();
 		for (const banInfo of bans) {
 			var userId = banInfo[1].user.id;
-			var banned = Get(guildData, `members.${userId}.banned`);
+			var banned = _.get(guildData, `members.${userId}.banned`);
 			if (banned) {
 				var banTime = banned.banTime;
 				var banDate = banned.banDate;
