@@ -36,8 +36,6 @@ console.log([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ].shuffle(8)
 const Discord = require(`discord.js`);
 const fs = require(`fs-extra`);
 
-var clientData = loadJSON('./discord/client.json');
-
 const client = new Discord.Client(/*{ ws: { intents: Discord.Intents.PRIVILEGED } }*/);
 var discord = loadJSON('./discord/discord.json');
 
