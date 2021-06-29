@@ -1,15 +1,7 @@
 {
-    "activations": 10,
-    "lastActivation": "2021-06-24",
-    "joinMessages": [
-        "\\:O It's ${user}, thanks for joining!",
-        "Welp, here's ${user}...",
-        "Well then, ${user}'s here...",
-        "Whoa, whoa, whoa, when did ${user} get here?",
-        "Ah shoot, here comes ${user}...",
-        "And then came ${user}!"
-    ],
-    "totalRegisteredCommands": 31,
+    "activations": 94,
+    "lastActivation": "2021-06-28",
+    "totalRegisteredCommands": 46,
     "tickets": {
         "855183990533521438": {
             "id": "855183990533521438",
@@ -21,6 +13,16 @@
             "member": "508720260741070848",
             "message": "857632770565865483",
             "closed": true
+        },
+        "857761850229915648": {
+            "id": "857761850229915648",
+            "member": "561579577369952256",
+            "message": "857632770565865483"
+        },
+        "858817066575986698": {
+            "id": "858817066575986698",
+            "member": "757655486979113093",
+            "message": "854967146244997140"
         }
     },
     "ticketMessages": {
@@ -40,29 +42,38 @@
             "channel": "855110846328864828"
         }
     },
-    "reactionRoleMessages": {
-        "857696285191962646": {
-            "id": "857696285191962646",
-            "emotes": {
-                "854850995053002793": {
-                    "id": "857696285191962646",
-                    "channel": "854949456108453908",
-                    "guild": "854838419677904906",
-                    "role": "854842705363992586"
-                },
-                "854851521992327221": {
-                    "id": "857696285191962646",
-                    "channel": "854949456108453908",
-                    "guild": "854838419677904906",
-                    "role": "856394625652359210"
-                }
-            }
-        }
-    },
     "commands": [
         {
             "name": "close",
             "description": "Close your current ticket channel"
+        },
+        {
+            "name": "colourrole",
+            "description": "Base command for colour role management",
+            "options": [
+                {
+                    "type": 1,
+                    "name": "create",
+                    "description": "Create a colour role with a chosen HEX code",
+                    "options": [
+                        {
+                            "type": 3,
+                            "name": "colour",
+                            "description": "Your chosen colour's HEX code",
+                            "required": true
+                        }
+                    ]
+                },
+                {
+                    "type": 1,
+                    "name": "remove",
+                    "description": "Remove your current colour role"
+                }
+            ]
+        },
+        {
+            "name": "tomato",
+            "description": "tomato"
         },
         {
             "name": "createticket",
@@ -236,56 +247,143 @@
             ]
         },
         {
-            "name": "colourrole",
-            "description": "Base command for colour role management",
+            "name": "ban",
+            "description": "Ban a member from the server",
+            "options": [
+                {
+                    "type": 6,
+                    "name": "member",
+                    "description": "The member you want to ban",
+                    "required": true
+                },
+                {
+                    "type": 3,
+                    "name": "timespan",
+                    "description": "The optional timespan to ban them for (let [x] be any number: [x]s, [x]m, [x]h, [x]d, [x]y)"
+                },
+                {
+                    "type": 3,
+                    "name": "reason",
+                    "description": "The reason why the member is being banned (defaults to \"Not kool enough to stay in Skripthut\")"
+                },
+                {
+                    "type": 4,
+                    "name": "messages",
+                    "description": "The amount of days ago to delete their messages",
+                    "choices": [
+                        {
+                            "name": "1",
+                            "value": 1
+                        },
+                        {
+                            "name": "2",
+                            "value": 2
+                        },
+                        {
+                            "name": "3",
+                            "value": 3
+                        },
+                        {
+                            "name": "4",
+                            "value": 4
+                        },
+                        {
+                            "name": "5",
+                            "value": 5
+                        },
+                        {
+                            "name": "6",
+                            "value": 6
+                        },
+                        {
+                            "name": "7",
+                            "value": 7
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "remindme",
+            "description": "Send a reminder at a certain date or after a certain timespan",
             "options": [
                 {
                     "type": 1,
-                    "name": "create",
-                    "description": "Create a colour role with a chosen HEX code",
+                    "name": "in",
+                    "description": "Send the reminder after a certain timespan",
                     "options": [
                         {
                             "type": 3,
-                            "name": "colour",
-                            "description": "Your chosen colour's HEX code",
+                            "name": "timespan",
+                            "description": "How long later to send the reminder",
                             "required": true
                         }
                     ]
                 },
                 {
                     "type": 1,
-                    "name": "remove",
-                    "description": "Remove your current colour role"
+                    "name": "at",
+                    "description": "Send the reminder at a certain date",
+                    "options": [
+                        {
+                            "type": 3,
+                            "name": "date",
+                            "description": "A date (type \"help\" for date format)",
+                            "required": true
+                        }
+                    ]
                 }
             ]
         },
         {
             "name": "deletecommands",
             "description": "Delete all commands"
-        },
-        {
-            "name": "tomato",
-            "description": "tomato"
         }
     ],
-    "totalTickets": 114,
+    "totalTickets": 117,
     "guilds": {
         "854838419677904906": {
             "members": {
-                "854846356081475614": {},
-                "482973633002733588": {},
-                "585019061193146368": {},
-                "757655486979113093": {},
-                "506219124020609045": {},
-                "450104454193217546": {},
                 "250747216086564866": {
                     "colourRole": "857396679518584842"
                 },
-                "365630764244664320": {},
-                "635197986774974484": {},
-                "576842567975567380": {},
-                "561579577369952256": {},
-                "508720260741070848": {}
+                "561579577369952256": {
+                    "hasTicket": "857761850229915648"
+                },
+                "757655486979113093": {
+                    "hasTicket": "858817066575986698"
+                },
+                "506219124020609045": {
+                    "banned": {
+                        "banDate": 1624863432755,
+                        "banTime": 31622400000,
+                        "moderator": "506219124020609045"
+                    }
+                },
+                "722898458020937769": {
+                    "colourRole": "858964448101269534"
+                }
+            },
+            "message_logs": "858534764331008000"
+        }
+    },
+    "reactionRoleMessages": {
+        "858847477208842281": {
+            "id": "858847477208842281",
+            "emotes": {
+                "⭐": {
+                    "id": "858847477208842281",
+                    "channel": "854840866653208608",
+                    "guild": "854838419677904906",
+                    "role": "858844163919446027"
+                }
+            }
+        }
+    },
+    "kool": {
+        "kooler": {
+            "koolest": {
+                "koolester": "im the koolestest"
             }
         }
     }

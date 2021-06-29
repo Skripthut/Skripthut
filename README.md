@@ -4,7 +4,10 @@
 "type": value,
 "name": value,
 "description": value,
-"options": value
+"options": value,
+
+/** For any arguments **/
+"required": true // Delete if false
 ```
 Formatted all in order. If empty, delete object (delete `[]` and `{}`).
 

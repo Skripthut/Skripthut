@@ -1,21 +1,44 @@
 'use strict';
 
 /**
- * @returns Returns a random element from an array 
+ * Returns a number limited between the specified minimum and maximum.
+ * 
+ * @param {number} number The desired number to limit
+ * @param {number} min The lowest the specified number can be
+ * @param {number} max The highest the specified number can be
 **/
-Array.prototype.getRandomElement = function() {
-	return this[Math.floor(this.length - getRandom(0, this.length))];
+function limit(number, min, max) {
+	return Math.max(Math.min(number, max), min);
 }
+
+/**
+ * Returns a shuffled copy of this array. Please advise from using this with massive arrays, since this can produce lag.
+ * 
+ * @param {number} [totalElements] The total amount of elements to return (this value is limited to the length of the list -- negative or positive -- and defaults to the length of the list if unspecified)
+ * @returns {any[]} Returns a shuffled copy of this array
+**/
+Array.prototype.shuffle = function(totalElements) {
+	var length = this.length;
+	totalElements = (totalElements === undefined) ? length : limit(totalElements, length * (-1) + 1, length);
+	var array = [ ...this ];
+    for (let i = length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ array[i], array[j] ] = [ array[j], array[i] ];
+    }
+	return array.slice(0, totalElements);
+}
+
+console.log([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ].shuffle(8));
+
 /**
  * @module Discord
 **/
 const Discord = require(`discord.js`);
 const fs = require(`fs-extra`);
-const { PassThrough, Writable } = require('stream');
 
 var clientData = loadJSON('./discord/client.json');
 
-const client = new Discord.Client();
+const client = new Discord.Client(/*{ ws: { intents: Discord.Intents.PRIVILEGED } }*/);
 var discord = loadJSON('./discord/discord.json');
 
 var skripthut = "https://i.imgur.com/ocMfwH5.png";
@@ -81,21 +104,21 @@ class ReactionRoleEmote {
 /**
  * Read a file and parse it using JSON.
  *
- * @param {String} file The directory of the file you want to load.
- * @returns {JSON} Returns the stringified JSON as JavaScript object.
+ * @param {String} path The directory of the file you want to load.
+ * @returns Returns the stringified JSON as JavaScript object.
 **/
-function loadJSON(file) {
-    return JSON.parse(fs.readFileSync(file, `utf8`));
+function loadJSON(path) {
+	return JSON.parse(fs.readFileSync(path, `utf8`));
 }
 /**
  * Stringifies JSON and writes it into a file.
  *
- * @param {String} file The directory of the file you want to write.
- * @param {JSON} data The JSON to be stringified.
+ * @param {String} path The directory of the file you want to write.
+ * @param data The JSON to be stringified.
  * @returns Returns the writeFile Promise.
 **/
-async function writeJSON(file, data) {
-    return fs.writeFile(file, JSON.stringify(data, null, 4), `utf8`);
+async function writeJSON(path, data) {
+	return fs.writeFile(path, JSON.stringify(data, null, 4), `utf8`);
 }
 
 /**
@@ -152,7 +175,7 @@ async function registerCommands(guildId, ignoreSame = true, deleteUnset = true) 
 	commandLoop: for (const command of discord.commands) {
 		for (const awaitCommand of awaitCommands) {
 			var id = awaitCommand.id;
-			[ 'id', 'application_id', 'version', 'guild_id', 'default_permission' ].forEach(key => delete awaitCommand[key]);
+			[ 'id', 'application_id', 'version', 'guild_id', 'default_permission' ].forEach((key) => delete awaitCommand[key]);
 			if (JSON.stringify(command) === JSON.stringify(awaitCommand)) {
 				delete unset[id];
 				continue commandLoop;
@@ -174,13 +197,71 @@ async function registerCommands(guildId, ignoreSame = true, deleteUnset = true) 
 	return true;
 }
 
+var millis = {};
+millis.seconds = [ 's', 1000 ];
+millis.minutes = [ 'm', millis.seconds[1] * 60 ];
+millis.hours = [ 'h', millis.minutes[1] * 60 ];
+millis.days = [ 'd', millis.hours[1] * 24 ];
+millis.years = [ 'y', millis.days[1] * 365 ];
+
+var timespanRegex = {};
+for (const key of Object.keys(millis)) {
+	timespanRegex[key] = RegExp(`[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+) *${millis[key][0]}`, 'gi');
+}
+
+/**
+ * Get millis from a formatted string:
+ * 
+ * { [x]s - seconds, [x]m - minutes, [x]h - hours, [x]d - days, [x]y - years } where [x] is any floating point number
+ * 
+ * @param {string} string The formatted string to parse
+ * @returns Returns millis from formatted string
+**/
+async function getMillisFromString(string) {
+	if (!string) { return NaN; }
+	var millisTimespan = 0;
+	for (const key of Object.keys(timespanRegex)) {
+		[ ...string.matchAll(timespanRegex[key]) ].forEach((timespan) => {
+			millisTimespan += parseFloat(timespan[1]) * millis[key][1];
+		});
+	}
+	return millisTimespan;
+}
+
+/**
+ * @param {number} millisTimespan The length of the punishment in milliseconds
+ * @returns Returns an object containing the total milliseconds of the formatted timespan, and a readable timespan using said milliseconds
+**/
+async function getPunishmentDetails(millisTimespan) {
+	var timespan = await getMillisFromString(millisTimespan);
+	if (timespan === Infinity || timespan === NaN) { return null; }
+
+	var now = Date.now();
+	var milliseconds = timespan;
+
+	/** @type {string[]} **/
+	var time = [];
+	for (const key of Object.keys(millis).reverse()) {
+		var milliValue = Math.floor(timespan / millis[key][1]);
+		if (milliValue) { time.push(`${milliValue} ${milliValue === 1 ? key.substr(0, key.length - 1) : key}`); }
+		timespan -= milliValue * millis[key][1];
+	}
+
+	return {
+		now: now,
+		milliseconds: milliseconds,
+		readableTimespan: time.join(", "),
+		endDate: (milliseconds) ? new Date(now + milliseconds) : null
+	};
+}
+
 var permissionMessage;
 var guildId;
 var guild;
 var skripter;
 var tickets;
 client.on('ready', async () => {
-    console.log(`Logged in as ${client.user.tag}!`);
+	console.log(`Logged in as ${client.user.tag}!`);
 
 	permissionMessage = `You don't have permission to do this!`;
 	guildId = "854838419677904906";
@@ -191,7 +272,7 @@ client.on('ready', async () => {
 	//await deleteCommands(guildId);
 	await registerCommands(guildId);
 
-	client.ws.on('INTERACTION_CREATE', async interaction => { // WebSocket Interaction Create Event (for slash commands)
+	client.ws.on('INTERACTION_CREATE', async (interaction) => { // WebSocket Interaction Create Event (for slash commands)
 		const { name, options } = interaction.data;
 		const command = name.toLowerCase();
 
@@ -213,17 +294,17 @@ client.on('ready', async () => {
 		const channel_id = interaction.channel_id;
 		/**
 		 * The channel of the interaction
-		 * @type {Discord.TextChannel} 
+		 * @type {Discord.TextChannel}
 		**/
 		const channel = guild.channels.cache.get(channel_id);
 
 		/**
-		 * The ID of the user who created this interaction
+		 * The ID of the user who created the interaction
 		 * @type {Discord.Snowflake}
 		**/
 		const user_id = interaction.member.user.id;
 		/**
-		 * The user who created this interaction
+		 * The user who created the interaction
 		 * @type {Discord.User}
 		**/
 		const user = client.users.cache.get(user_id);
@@ -232,7 +313,6 @@ client.on('ready', async () => {
 		const member = guild.member(user);
 
 		const args = {};
-
 		if (options) {
 			for (const option of options) {
 				const { name, value } = option;
@@ -256,7 +336,7 @@ client.on('ready', async () => {
 				reply(interaction, 'Sending ticket messsage...');
 				var ticketChannel = await client.channels.cache.get(args.channel);
 				var message = args.message.replace(/%(n(?:ew)?l(?:ine)?|line ?break)%/g, "\n");
-				ticketChannel.send(message).then(message => {
+				ticketChannel.send(message).then((message) => {
 					discord.ticketMessages[message.id] = {
 						id: message.id,
 						description: args.description,
@@ -282,7 +362,7 @@ client.on('ready', async () => {
 					const id = creator.id;
 					const type = "member";
 
-					const permissionOverwrite = await channel.permissionOverwrites.find(overwrites => overwrites.type === type && overwrites.id === id);
+					const permissionOverwrite = await channel.permissionOverwrites.find((overwrites) => overwrites.type === type && overwrites.id === id);
 					if (permissionOverwrite) { await permissionOverwrite.delete("Ticket closed"); }
 
 					deleteStat(creator, "hasTicket");
@@ -294,172 +374,6 @@ client.on('ready', async () => {
 				reply(interaction, 'You can only use this in a ticket channel!')
 				break;
 				// END CLOSE COMMAND
-
-			// REACTIONROLE COMMAND
-			case 'reactionrole':
-				if (!member.hasPermission("MANAGE_ROLES")) {
-					reply(interaction, permissionMessage);
-					break;
-				}
-				var option = options[0];
-				var type = option.name;
-
-				if (type === 'create') {
-					var chosenEmote = (option.options[2] || { value: '📰' }).value;
-
-					if (chosenEmote.match(/\p{Extended_Pictographic}/u)) {
-						var reactionRoleEmote = chosenEmote;
-						var reactionRoleEmoteId = chosenEmote;
-					}
-					else {
-						var reactionRoleEmote = client.emojis.cache.find(emote => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: '' };
-						var reactionRoleEmoteId = reactionRoleEmote.id;
-					}
-
-					if (!reactionRoleEmoteId) {
-						reply(interaction, `That's not a valid emote!`);
-						break;
-					}
-
-					var reactionRoleChannel = guild.channels.cache.get(option.options[0].value);
-					var reactionRoleMessage = option.options[1].value.replace(/%(n(?:ew)?l(?:ine)?|line ?break)%/g, "\n");
-					var reactionRole = option.options[3].value;
-
-					var sentMessage = reactionRoleChannel.send(reactionRoleMessage);
-					await reply(interaction, 'Sending...');
-
-					sentMessage.then(async message => {
-						await message.react(reactionRoleEmote);
-						discord.reactionRoleMessages[message.id] = {
-							id: message.id,
-							emotes: {}
-						}
-						discord.reactionRoleMessages[message.id].emotes[reactionRoleEmoteId] =
-							new ReactionRoleEmote(message, reactionRole);
-					});
-					break;
-				}
-
-				if (type === 'add') {
-					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
-
-					if (ids[1] !== guild_id) {
-						reply(interaction, `That's not a valid message URL (guild ID invalid)!`);
-						break;
-					}
-					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
-					if (!reactionRoleChannel) {
-						reply(interaction, `That's not a valid message URL (channel ID invalid)!`);
-						break;
-					}
-					var reactionRoleMessageId = ids[3];
-					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
-					if (!reactionRoleMessage) {
-						reply(interaction, `That's not a valid message URL (message ID invalid)!`);
-						break;
-					}
-
-					var chosenEmote = (option.options[1] || { value: '📰' }).value;
-
-					if (chosenEmote.match(/\p{Extended_Pictographic}/u)) {
-						var reactionRoleEmote = chosenEmote;
-						var reactionRoleEmoteId = chosenEmote;
-					}
-					else {
-						var reactionRoleEmote = client.emojis.cache.find(emote => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: null };
-						var reactionRoleEmoteId = reactionRoleEmote.id;
-					}
-
-					if (!reactionRoleEmoteId) {
-						reply(interaction, `That's not a valid emote!`);
-						break;
-					}
-
-					var reactionRole = option.options[2].value;
-
-					const _reactionRoleMessage = discord.reactionRoleMessages[reactionRoleMessageId];
-					if (_reactionRoleMessage) {
-						const emotes = _reactionRoleMessage.emotes;
-						if (emotes[reactionRoleEmoteId]) {
-							reply(interaction, `This reaction role message already has this emote set!`);
-							break;
-						}
-						if (JSON.stringify(emotes).includes(reactionRole)) {
-							reply(interaction, `This reaction role message already has this role set!`);
-							break;
-						}
-					}
-
-					await reply(interaction, 'Adding...');
-					await reactionRoleMessage.react(reactionRoleEmote);
-					if (!_reactionRoleMessage) {
-						discord.reactionRoleMessages[reactionRoleMessageId] = {
-							id: reactionRoleMessageId,
-							emotes: {}
-						}
-					}
-					discord.reactionRoleMessages[reactionRoleMessageId].emotes[reactionRoleEmoteId] =
-						new ReactionRoleEmote(reactionRoleMessage, reactionRole);
-					break;
-				}
-
-				if (type === 'remove') {
-					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
-
-					if (ids[1] !== guild_id) {
-						reply(interaction, `That's not a valid message URL (guild ID invalid)!`);
-						break;
-					}
-					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
-					if (!reactionRoleChannel) {
-						reply(interaction, `That's not a valid message URL (channel ID invalid)!`);
-						break;
-					}
-					var reactionRoleMessageId = ids[3];
-					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
-					if (!reactionRoleMessage) {
-						reply(interaction, `That's not a valid message URL (message ID invalid)!`);
-						break;
-					}
-					
-					var _reactionRoleMessage = discord.reactionRoleMessages[reactionRoleMessageId];
-
-					if (!_reactionRoleMessage) {
-						reply(interaction, `This message doesn't have any reaction roles!`);
-						break;
-					}
-
-					var reactionRoleId = option.options[1].value;
-
-					/**
-					 * @type {ReactionRoleEmote[]}
-					**/
-					const emotes = _reactionRoleMessage.emotes;
-					const keys = Object.keys(emotes);
-					for (var i = 0; i < keys.length; i++) {
-						if (emotes[keys[i]].role === reactionRoleId) {
-							var reactionRoleEmote = keys[i];
-							delete discord.reactionRoleMessages[reactionRoleMessageId].emotes[i];
-						}
-					}
-
-					if (!keys.length) {
-						delete discord.reactionRoleMessages[reactionRoleMessageId];
-					}
-
-					if (!reactionRoleEmote) {
-						reply(interaction, `This message doesn't have that role!`);
-						break;
-					}
-
-					var reactionRole = guild.roles.cache.get(reactionRoleId);
-
-					reply(interaction, `Removing ${reactionRole} from the specified message...`);
-					reactionRoleMessage.reactions.resolve(reactionRoleEmote).remove();
-					break;
-				}
-				reply(interaction, 'bruh moment');
-				break;
 
 			/*
 			 * Role Commands
@@ -531,6 +445,169 @@ client.on('ready', async () => {
 				break;
 			// END ROLE COMMAND
 
+			// REACTIONROLE COMMAND
+			case 'reactionrole':
+				if (!member.hasPermission("MANAGE_ROLES")) {
+					reply(interaction, permissionMessage);
+					break;
+				}
+				var option = options[0];
+				var type = option.name;
+
+				if (type === 'create') {
+					var chosenEmote = (option.options[2] || { value: '📰' }).value;
+
+					if (chosenEmote.match(/\p{Extended_Pictographic}/u)) {
+						var reactionRoleEmote = chosenEmote;
+						var reactionRoleEmoteId = chosenEmote;
+					}
+					else {
+						var reactionRoleEmote = client.emojis.cache.find((emote) => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: '' };
+						var reactionRoleEmoteId = reactionRoleEmote.id;
+					}
+
+					if (!reactionRoleEmoteId) {
+						reply(interaction, `That's not a valid emote!`);
+						break;
+					}
+
+					var reactionRoleChannel = guild.channels.cache.get(option.options[0].value);
+					var reactionRoleMessage = option.options[1].value.replace(/%(n(?:ew)?l(?:ine)?|line ?break)%/g, "\n");
+					var reactionRole = option.options[3].value;
+
+					var sentMessage = reactionRoleChannel.send(reactionRoleMessage);
+					await reply(interaction, 'Sending...');
+
+					sentMessage.then(async (message) => {
+						await message.react(reactionRoleEmote);
+						discord.reactionRoleMessages[message.id] = {
+							id: message.id,
+							emotes: {}
+						}
+						discord.reactionRoleMessages[message.id].emotes[reactionRoleEmoteId] = new ReactionRoleEmote(message, reactionRole);
+					});
+					break;
+				}
+
+				if (type === 'add') {
+					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
+
+					if (ids[1] !== guild_id) {
+						reply(interaction, `That's not a valid message URL (guild ID invalid)!`);
+						break;
+					}
+					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
+					if (!reactionRoleChannel) {
+						reply(interaction, `That's not a valid message URL (channel ID invalid)!`);
+						break;
+					}
+					var reactionRoleMessageId = ids[3];
+					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
+					if (!reactionRoleMessage) {
+						reply(interaction, `That's not a valid message URL (message ID invalid)!`);
+						break;
+					}
+
+					var chosenEmote = (option.options[1] || { value: '📰' }).value;
+
+					if (chosenEmote.match(/\p{Extended_Pictographic}/u)) {
+						var reactionRoleEmote = chosenEmote;
+						var reactionRoleEmoteId = chosenEmote;
+					}
+					else {
+						var reactionRoleEmote = client.emojis.cache.find((emote) => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: null };
+						var reactionRoleEmoteId = reactionRoleEmote.id;
+					}
+
+					if (!reactionRoleEmoteId) {
+						reply(interaction, `That's not a valid emote!`);
+						break;
+					}
+
+					var reactionRole = option.options[2].value;
+
+					const _reactionRoleMessage = Get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
+					if (_reactionRoleMessage) {
+						const emotes = _reactionRoleMessage.emotes;
+						if (emotes[reactionRoleEmoteId]) {
+							reply(interaction, `This reaction role message already has this emote set!`);
+							break;
+						}
+						if (JSON.stringify(emotes).includes(reactionRole)) {
+							reply(interaction, `This reaction role message already has this role set!`);
+							break;
+						}
+					}
+
+					await reply(interaction, 'Adding...');
+					await reactionRoleMessage.react(reactionRoleEmote);
+					if (!_reactionRoleMessage) {
+						Set(discord, `reactionRoleMessages.${reactionRoleMessageId}`, 
+						{
+							id: reactionRoleMessageId,
+							emotes: {}
+						});
+					}
+					discord.reactionRoleMessages[reactionRoleMessageId].emotes[reactionRoleEmoteId] = new ReactionRoleEmote(reactionRoleMessage, reactionRole);
+					break;
+				}
+
+				if (type === 'remove') {
+					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
+
+					if (ids[1] !== guild_id) {
+						reply(interaction, `That's not a valid message URL (guild ID invalid)!`);
+						break;
+					}
+					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
+					if (!reactionRoleChannel) {
+						reply(interaction, `That's not a valid message URL (channel ID invalid)!`);
+						break;
+					}
+					var reactionRoleMessageId = ids[3];
+					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
+					if (!reactionRoleMessage) {
+						reply(interaction, `That's not a valid message URL (message ID invalid)!`);
+						break;
+					}
+
+					var _reactionRoleMessage = Get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
+
+					if (!_reactionRoleMessage) {
+						reply(interaction, `This message doesn't have any reaction roles!`);
+						break;
+					}
+
+					var reactionRoleId = option.options[1].value;
+
+					const emotes = _reactionRoleMessage.emotes;
+					const keys = Object.keys(emotes);
+					for (var i = 0; i < keys.length; i++) {
+						const key = keys[i];
+						if (emotes[key].role === reactionRoleId) {
+							var reactionRoleEmote = key;
+							delete discord.reactionRoleMessages[reactionRoleMessageId].emotes[key];
+						}
+					}
+
+					if (!Object.keys(discord.reactionRoleMessages[reactionRoleMessageId].emotes).length) {
+						delete discord.reactionRoleMessages[reactionRoleMessageId];
+					}
+
+					if (!reactionRoleEmote) {
+						reply(interaction, `This message doesn't have that role!`);
+						break;
+					}
+
+					var reactionRole = guild.roles.cache.get(reactionRoleId);
+
+					reply(interaction, `Removing ${reactionRole} from the specified message...`);
+					reactionRoleMessage.reactions.resolve(reactionRoleEmote).remove();
+					break;
+				}
+				reply(interaction, 'bruh moment');
+				break;
+
 			// COLOURROLE COMMAND
 			case 'colourrole':
 				var roles = member.roles.cache;
@@ -566,7 +643,7 @@ client.on('ready', async () => {
 							},
 							reason: `Created colour role for ${member}`,
 						})
-							.then(async result => {
+							.then(async (result) => {
 								const embed = new Discord.MessageEmbed()
 									.setColor(color)
 									.setTitle(createdRole)
@@ -603,10 +680,104 @@ client.on('ready', async () => {
 						break;
 					}
 					reply(interaction, `You currently don't have a colour role...`);
-					break;
 				}
 				break;
 			// END COLOURROLE COMMAND
+
+			/*
+			 * Moderator Commands 
+			 */
+			case 'ban':
+				if (!member.hasPermission("BAN_MEMBERS")) {
+					reply(interaction, permissionMessage);
+					break;
+				}
+
+				var targetMember = await guild.members.fetch(args.member);
+				if (!targetMember) {
+					reply(interaction, `That's not a valid member!`);
+					break;
+				}
+				var target = targetMember.user;
+
+				if (args.timespan) {
+					var details = await getPunishmentDetails(args.timespan);
+					console.log(details);
+					if (!details) {
+						reply(interaction, `That's not a valid timespan (where [x] is any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`);
+						break;
+					}
+					Set(discord.guilds, `${guild_id}.members.${target.id}.banned`, {
+						banDate: details.now,
+						banTime: details.milliseconds,
+						moderator: user_id
+					});
+				}
+
+				var reason = args.reason || "Not kool enough to stay in Skripthut";
+				
+				target.send('u ban lmao')
+					.then((message) => {
+						console.log(message);
+					})
+					.catch(() => {});
+				targetMember.ban({ reason: reason });
+				console.log(now, details.milliseconds);
+				reply(interaction,
+					new Discord.MessageEmbed()
+						.setColor('#ff2f2f')
+						.setAuthor(target.tag, target.avatarURL(), target.avatarURL())
+						.setDescription(`Details for ${target}'s ban from ${guild.name}`)
+						.addFields(
+							{ name: 'Ban Length', value: details.readableTimespan || "Infinite" },
+							{ name: 'Lasts Until', value: details.endDate || "Forever" },
+							{ name: 'Reason', value: reason }
+						)
+						.setFooter(`Banned by ${user.tag}`, user.avatarURL())
+				)
+				break;
+			case 'mute':
+				var hasRoles =
+				(
+					roles.get('854842705363992586')
+				);
+				if (!hasRoles && !member.hasPermission("MANAGE_ROLES")) {
+					reply(interaction, permissionMessage);
+					break;
+				}
+
+				var target = client.users.cache.get(args.member);
+				var targetMember = guild.member(target);
+
+				if (args.timespan) {
+					var details = await getPunishmentDetails(args.timespan);
+					console.log(details);
+					if (!details) {
+						reply(interaction, `That's not a valid timespan (let [x] be any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`);
+						break;
+					}
+					setStat(targetMember, "banDate", now);
+					setStat(targetMember, "banTime", details.milliseconds);
+				}
+
+				var reason = args.reason || "Not kool enough to stay in Skripthut";
+				
+				target.ban({ reason: `${reason} (${user.tag})` });
+				console.log(now, details.milliseconds);
+				reply(interaction,
+					new Discord.MessageEmbed()
+						.setColor('#ff2f2f')
+						.setTitle('Ban Details')
+						.setAuthor(target.tag, target.avatarURL(), target.avatarURL())
+						.setDescription(`Details for ${target}'s ban from ${guild.name}`)
+						.addFields(
+							{ name: 'Ban Length', value: details.readableTimespan || "Infinite" },
+							{ name: 'Lasts Until', value: details.endDate || "Forever" },
+							{ name: 'Reason', value: reason }
+						)
+						.setFooter(`Banned by ${user.tag}`, user.avatarURL())
+				)
+				break;
 
 			/*
 			 * Admin Commands
@@ -619,18 +790,77 @@ client.on('ready', async () => {
 				reply(interaction, `tomato`);
 				break;
 
+			case 'remindme':
+				var option = options[0];
+				var type = option.name;
+
+				var time = option.options[0].value;
+
+				if (type === 'at') {
+					if (time === 'help') {
+						var examples = [
+							'01 Jan 1970 00:00:00 GMT',
+							'2021 06 28',
+							'04 Dec 1995',
+							'2015-02-31'
+						];
+						const embed = new Discord.MessageEmbed()
+							.setColor('#808080')
+							.setTitle('Date Format')
+							.setAuthor('Skripthut', skripthut, skripthut)
+							.setDescription(`This command uses the [JavaScript Date Format](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#description).`)
+							.addFields(
+								{ name: 'Format', value: 'One of the formats is the [ISO Date Format](https://www.ionos.ca/digitalguide/websites/web-development/iso-8601/). \nCheck out [JavaScript Date Time String Format](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#date_time_string_format) and [JavaScript Implementation-Specific Date Formats](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#fall-back_to_implementation-specific_date_formats) for more details.' },
+								{ name: 'Example Usage', value: '```' + examples.join('\n') + '```' }
+							)
+							.setFooter(`Requested by ${user.tag}`, user.avatarURL());
+							
+						reply(interaction, embed, true);
+						break;
+					}
+					if (!date) {
+						reply(interaction, `That's not a valid date!`);
+						break;
+					}
+				}
+
+				reply(interaction, 'yolo');
+				break;
+
 			default:
 				reply(interaction, 'nani');
 		}
 	});
+	client.on('raw', async (packet) => {
+		if ([ 'MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE' ].includes(packet.t)) {
+			const channel = client.channels.cache.get(packet.d.channel_id);
+			if (channel.messages.cache.get(packet.d.message_id)) { return };
+			channel.messages.fetch(packet.d.message_id).then((message) => {
+				const emoji = packet.d.emoji.id || packet.d.emoji.name;
+				const reaction = message.reactions.cache.get(emoji);
+				if (packet.t === 'MESSAGE_REACTION_ADD') {
+					client.emit('messageReactionAdd', reaction, client.users.cache.get(packet.d.user_id));
+				}
+				else {
+					client.emit('messageReactionRemove', reaction, client.users.cache.get(packet.d.user_id));
+				}
+			})
+				.catch(console.error);
+		}
+	});
+
+	setInterval(reloadDiscordJSON, 1000);
 });
 
-client.on('message', message => {
-	var content = message.toString();
-	var guild = message.guild;
+client.on('message', (message) => {
 	var user = message.author;
+	if (user.bot) { return; }
+	var content = message.content;
+	var guild = message.guild;
+	var channel = message.channel;
 	var member = guild.member(user);
 	var lower = content.toLowerCase();
+	
 	if (member.hasPermission("ADMINISTRATOR")) {
 		if (lower === '!registercommands') {
 			registerCommands(guild.id);
@@ -638,33 +868,95 @@ client.on('message', message => {
 		else if (lower === `!delete the kool commands ${member.id}`) {
 			deleteCommands(guild.id);
 		}
+		else if (lower.includes('!eval')) {
+			eval(message.content.substr(6, lower.length));
+		}
 	}
 });
 
-client.on('guildMemberAdd', async member => {
+client.on('messageUpdate', async (oldMessage, newMessage) => {
+	var user = newMessage.author;
+	if (user.bot) { return; }
+	var guild = newMessage.guild;
+	var channel = newMessage.channel;
+	var oldContent = oldMessage.content;
+	var newContent = newMessage.content;
+	/** @type {Discord.TextChannel} **/
+	var logs = guild.channels.cache.get(Get(discord.guilds, `${guild.id}.message_logs`));
+	if (logs) {
+		var description = `📎 **${user} edited [a message](https://discord.com/channels/${guild.id}/${channel.id}/${newMessage.id}) in ${channel}.**`;
+		var descLength = description.length - 2;
+		const embed = new Discord.MessageEmbed()
+			.setColor('#dfdf22')
+			.setDescription(description)
+			.setAuthor(user.tag, user.avatarURL(), user.avatarURL())
+			.addFields(
+				{ name: 'Old Message', value: oldContent.substr(0, Math.min(oldContent.length, 2000 - descLength)) },
+				{ name: 'New Message', value: newContent.substr(0, Math.min(newContent.length, 2000 - descLength)) }
+			);
+		logs.send(embed);
+	}
+});
+client.on('messageDelete', async (message) => {
+	/** @type {Discord.User} **/
+	var user = message.author;
+	if (user.bot) { return; }
+
+	var guild = message.guild;
+	var channel = message.channel;
+	var content = message.content;
+	/** @type {Discord.TextChannel} **/
+	var logs = guild.channels.cache.get(Get(discord.guilds, `${guild.id}.message_logs`));
+	if (logs) {
+		var description = `📎 **${user} deleted a message in ${channel} (ID: ${message.id}).**`;
+		var descLength = description.length - 2;
+		const embed = new Discord.MessageEmbed()
+			.setColor('#e73535')
+			.setDescription(description)
+			.setAuthor(user.tag, user.avatarURL(), user.avatarURL())
+			.addFields(
+				{ name: 'Message Content', value: content.substr(0, Math.min(content.length, 4000 - descLength)) }
+			);
+		logs.send(embed);
+	}
+});
+
+client.on('guildMemberAdd', async (member) => {
+	const guild = member.guild;
+	const user = member.user;
 	member.roles.add(skripter);
 	client.channels.cache.get('854842141498277908').send(
-		discord.joinMessages.getRandomElement()
-			.replace('${user}', `${member}`)
-	);
+		(Get(discord, `guilds.${guild.id}.joinMessages`) || [
+			"\\:O It's ${user}, thanks for joining!",
+			"Welp, here's ${user}...",
+			"Well then, ${user}'s here...",
+			"Whoa, whoa, whoa, when did ${user} get here?",
+			"Ah shoot, here comes ${user}...",
+			"And then came ${user}!"
+    	])
+			.shuffle(1)[0]
+			.replace('${user}', user.tag) // Replace ${user} with the user's tag (username#discriminator)
+			.replace('${user.mention}', user.toString()) // Replace ${user.mention} with the user's mention
+			.replace('${guild}', guild.name) // Replace ${guild} with the guild name
+	); // Gets join messages, shuffles, and replaces format strings with values
 });
 
 /**
- * Returns a pseudo-random float between a minimum and maximum range.
+ * Returns a pseudorandom float between a minimum and maximum range.
  *
  * @param {number} min The minimum number to get a random number between.
  * @param {number} max The maximum number to get a random number between.
- * @returns {number} The pseudo-random floating point number between min and max.
+ * @returns {number} The pseudorandom floating point number between min and max.
 **/
 function getRandom(min, max) {
 	return min + Math.random() * max;
 }
 /**
- * Returns a pseudo-random integer between a minimum and maximum range.
+ * Returns a pseudorandom integer between a minimum and maximum range.
  *
  * @param {number} min The minimum number to get a random integer between.
  * @param {number} max The maximum number to get a random integer between.
- * @returns {number} The pseudo-random integer between min and max.
+ * @returns {number} The pseudorandom integer between min and max.
 **/
 function getRandomInt(min, max) {
 	return Math.round(getRandom(min, max));
@@ -680,22 +972,11 @@ discord.activations++;
 //var logs = fs.createWriteStream(`./logs/${now}**${discord.activations}`);
 //logs.write('hi');
 
-client.on('raw', packet => {
-    if ([ 'MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE' ].includes(packet.t)) {
-    	const channel = client.channels.cache.get(packet.d.channel_id);
-		if (channel.messages.cache.get(packet.d.message_id)) { return };
-		channel.messages.fetch(packet.d.message_id).then(message => {
-			const emoji = packet.d.emoji.id || packet.d.emoji.name;
-			const reaction = message.reactions.cache.get(emoji);
-			if (packet.t === 'MESSAGE_REACTION_ADD') {
-				client.emit('messageReactionAdd', reaction, client.users.cache.get(packet.d.user_id));
-			}
-			else {
-				client.emit('messageReactionRemove', reaction, client.users.cache.get(packet.d.user_id));
-			}
-		})
-			.catch(console.error);
-	}
+//var access = fs.createWriteStream(`./logs/${now}**${discord.activations}`);
+//process.stdout.write = process.stderr.write = access.write.bind(access);
+
+process.on('uncaughtException', function(err) {
+  console.error((err && err.stack) ? err.stack : err);
 });
 
 client.on('messageReactionAdd', async (reaction, user) => {
@@ -721,7 +1002,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 			},
 			reason: `Created ticket for ${user}`
 		})
-			.then(async channel => {
+			.then(async (channel) => {
 				await 	channel.setParent(tickets),
 						channel.setTopic(ticket.description),
 						channel.overwritePermissions([
@@ -772,7 +1053,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
 				setTimeout(async function() {
 					await channel.send(`Hey, ${user}! Thanks for creating a ticket.`);
-					channel.send(embed).then(message => {
+					channel.send(embed).then((message) => {
 						embed.title = 'Click here to jump to ticket';
 						embed.description = `${user.tag} created a ticket`;
 						embed.url = `https://discord.com/channels/${guild.id}/${channel.id}/${message.id}`;
@@ -781,15 +1062,13 @@ client.on('messageReactionAdd', async (reaction, user) => {
 					});
 				}, 250);
 			});
-		return;
 	}
 
-	const reactionRole = discord.reactionRoleMessages[message.id];
+	const reactionRole = Get(discord, `reactionRoleMessages.${message.id}`);
 	if (reactionRole) {
 		var emoji = reaction._emoji;
 		var reactionRoleEmote = reactionRole.emotes[emoji.name] || reactionRole.emotes[emoji.id];
 		if (reactionRoleEmote) { member.roles.add(reactionRoleEmote.role, 'Reacted to reaction role message'); }
-		return;
 	}
 });
 
@@ -800,14 +1079,111 @@ client.on('messageReactionRemove', async (reaction, user) => {
 	const guild = message.guild;
 	var member = guild.member(user);
 
-	const reactionRole = discord.reactionRoleMessages[message.id];
+	const reactionRole = Get(discord, `reactionRoleMessages.${message.id}`);;
 	if (reactionRole) {
 		var emoji = reaction._emoji;
 		var reactionRoleEmote = reactionRole.emotes[emoji.name] || reactionRole.emotes[emoji.id];
 		if (reactionRoleEmote) { member.roles.remove(reactionRoleEmote.role, 'Unreacted to reaction role message'); }
-		return;
 	}
 });
+
+client.on('guildBanRemove', async (guild, user) => {
+	Delete(discord.guilds, `${guild.id}.members.${user.id}.banned`);
+});
+
+/**
+ * @param {string} path The string path of the desired value of the object
+ * @returns {[string, string, {index: number}, {input: string}, {groups: undefined}][]} The Array versions of RegExp String Iterators
+**/
+function getPath(path) {
+	var objects = Array.from(path.matchAll(/((?:(?![\.[\]\d]).)+)\.?/gi));
+
+	objects.push(...Array.from(path.matchAll(/\[(\d+)\]/g)));
+	return objects.sort((a, b) => a.index - b.index);
+}
+
+/**
+ * Dynamically sets a nested value in an object.
+ * 
+ * @param obj The object which contains the value you want to change/set.
+ * @param {string} path The path to the value you want to set.
+ * @param value The value you want to set it to.
+ * 
+ * @example
+ * var object = { foo: { bar: [ 1, 2, 3, 4, 5 ] } };
+ * Set(object, 'foo.bar[3]', 10);
+ * 	console.log(
+ * JSON.stringify(object) === JSON.stringify({ foo: { bar: [ 1, 2, 3, 10, 5 ] } })
+ * ); // Logs true
+**/
+function Set(obj, path, value) {
+	var schema = obj;
+	var pList = getPath(path);
+	var len = pList.length;
+	for(var i = 0; i < len - 1; i++) {
+		var elem = pList[i];
+		var index = elem[0].includes('[') ? parseInt(elem[1]) : elem[1];
+		if(!schema[index]) { schema[index] = {}; }
+		schema = schema[index];
+	}
+
+	var elem = pList[i];
+	schema[elem[0].includes('[') ? parseInt(elem[1]) : elem[1]] = value;
+	return obj;
+}
+
+/**
+ * Dynamically gets a nested value in an object.
+ * 
+ * @param obj The object which contains the value you want to get.
+ * @param {string} path The path to the value you want to get.
+ * 
+ * @example
+ * console.log(Get({ foo: { bar: [ 1, 2, 3, 4, 5 ] } }, 'foo.bar[3]') === 4); // Logs true
+**/
+function Get(obj, path) {
+	var schema = obj;
+	var pList = getPath(path);
+	var len = pList.length;
+	for(var i = 0; i < len - 1; i++) {
+		var elem = pList[i];
+		var index = elem[0].includes('[') ? parseInt(elem[1]) : elem[1];
+		if(!schema[index]) { return undefined; }
+		schema = schema[index];
+	}
+
+	var elem = pList[i];
+	return schema[elem[0].includes('[') ? parseInt(elem[1]) : elem[1]];
+}
+
+/**
+ * Dynamically deletes a nested value in an object.
+ * 
+ * @param obj The object which contains the value you want to delete.
+ * @param {string} path The path to the value you want to delete.
+ * 
+ * @example
+ * var object = { foo: { bar: [ 1, 2, 3, 4, 5 ] } };
+ * Delete(object, 'foo.bar[3]');
+ * console.log(
+ * 	JSON.stringify(object) === JSON.stringify({ foo: { bar: [ 1, 2, 10, 5 ] } })
+ * ); // Logs true
+**/
+function Delete(obj, path) {
+	var schema = obj;
+	var pList = getPath(path);
+	var len = pList.length;
+	for(var i = 0; i < len - 1; i++) {
+		var elem = pList[i];
+		var index = elem[0].includes('[') ? parseInt(elem[1]) : elem[1];
+		if(!schema[index]) { return; }
+		schema = schema[index];
+	}
+
+	var elem = pList[i];
+	delete schema[elem[0].includes('[') ? parseInt(elem[1]) : elem[1]];
+}
+
 /**
  * Set a stat of a member in a guild.
  *
@@ -817,11 +1193,7 @@ client.on('messageReactionRemove', async (reaction, user) => {
 **/
 function setStat(member, key, value) {
 	const guild = member.guild;
-	if (!discord.guilds) { discord.guilds = {} }
-	if (!discord.guilds[guild.id]) { discord.guilds[guild.id] = {}; }
-	if (!discord.guilds[guild.id].members) { discord.guilds[guild.id].members = {}; }
-	if (!discord.guilds[guild.id].members[member.id]) { discord.guilds[guild.id].members[member.id] = {}; }
-	discord.guilds[guild.id].members[member.id][key] = value;
+	Set(discord.guilds, `${guild.id}.members.${member.id}.${key}`, value);
 }
 
 /**
@@ -832,11 +1204,7 @@ function setStat(member, key, value) {
 **/
 function deleteStat(member, key) {
 	const guild = member.guild;
-	if (!discord.guilds) { discord.guilds = {} }
-	if (!discord.guilds[guild.id]) { discord.guilds[guild.id] = {}; }
-	if (!discord.guilds[guild.id].members) { discord.guilds[guild.id].members = {}; }
-	if (!discord.guilds[guild.id].members[member.id]) { discord.guilds[guild.id].members[member.id] = {}; }
-	delete discord.guilds[guild.id].members[member.id][key];
+	Delete(discord.guilds, `${guild.id}.members.${member.id}.${key}`);
 }
 
 /**
@@ -848,30 +1216,27 @@ function deleteStat(member, key) {
 **/
 function getStat(member, key) {
 	const guild = member.guild;
-	if (!discord.guilds) { discord.guilds = {} }
-	if (!discord.guilds[guild.id]) { discord.guilds[guild.id] = {}; }
-	if (!discord.guilds[guild.id].members) { discord.guilds[guild.id].members = {}; }
-	if (!discord.guilds[guild.id].members[member.id]) { discord.guilds[guild.id].members[member.id] = {}; }
-	return discord.guilds[guild.id].members[member.id][key];
+	return Get(discord.guilds, `${guild.id}.members.${member.id}.${key}`);
 }
 
 /**
  * Reply to a Discord interaction.
  *
  * @param {Discord.Interaction} interaction The interaction you want to reply to.
- * @param {String} response The message you want to respond with.
+ * @param {(string | Discord.MessageEmbed)} response The message you want to respond with.
+ * @param {boolean} isEphemeral Whether the reply should be strictly for the interactor or everyone to see
 **/
-async function reply(interaction, response) {
+async function reply(interaction, response, isEphemeral) {
 	const data = (typeof response === 'object') ? await createAPIMessage(interaction, response) : { content: response }
 	client.api.interactions(interaction.id, interaction.token)
 		.callback
-		.post(
-			{
-				data: {
-					type: 4,
-					data
-				}
-			});
+		.post({
+			ephemeral: isEphemeral,
+			data: {
+				type: 4,
+				data
+			}
+		});
 }
 
 async function createAPIMessage(interaction, content) {
@@ -884,13 +1249,38 @@ async function createAPIMessage(interaction, content) {
 	return { ...data, files };
 }
 
-setInterval(async function() {
-	client.guilds.cache.forEach(async guild => {
-		var clientMember = guild.member(client.user);
-		getStat(clientMember, "test");
+function clearEmpties(object) {
+	for (var key in object) {
+		if (!object[key] || typeof object[key] !== "object") { continue; }
+		clearEmpties(object[key]);
+		if (!Object.keys(object[key]).length) { delete object[key]; }
+	}
+}
+
+async function reloadDiscordJSON() {
+	var now = Date.now();
+	Object.keys(discord.guilds).forEach(async (guildId) => {
+		var guildData = discord.guilds[guildId];
+		/** @type {Discord.Guild} **/
+		var guild = client.guilds.cache.get(guildId);
+		var bans = await client.guilds.cache.get(guildId).fetchBans();
+		for (const banInfo of bans) {
+			var userId = banInfo[1].user.id;
+			var banned = Get(guildData, `members.${userId}.banned`);
+			if (banned) {
+				var banTime = banned.banTime;
+				var banDate = banned.banDate;
+				var moderator = client.users.cache.get(banned.moderator);
+				if (banDate + banTime <= now) {
+					await guild.members.unban(userId, `Temporary ban ran out (${moderator.tag})`);
+					delete discord.guilds[guildId].members[userId].banned;
+				}
+			}
+		}
 	});
 
+	clearEmpties(discord);
 	writeJSON('./discord/discord.json', discord);
-}, 1000);
+}
 
 client.login(Buffer.from(clientData.encodedBotToken, 'base64').toString('ascii'));
