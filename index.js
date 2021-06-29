@@ -1283,4 +1283,4 @@ async function reloadDiscordJSON() {
 	writeJSON('./discord/discord.json', discord);
 }
 
-client.login(Buffer.from(clientData.encodedBotToken, 'base64').toString('ascii'));
+client.login(process.env.TOKEN);
