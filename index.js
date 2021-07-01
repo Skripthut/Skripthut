@@ -284,10 +284,9 @@ client.on('ready', async () => {
 	permissionMessage = `You don't have permission to do this!`;
 	guildId = "854838419677904906";
 	guild = client.guilds.cache.get(guildId);
-	skripter = "854841582754857000";
+	skripter = "860242610613911553";
 	tickets = "854954327268786227";
 
-	//await deleteCommands(guildId);
 	await registerCommands(guildId);
 
 	client.ws.on('INTERACTION_CREATE', async (interaction) => { // WebSocket Interaction Create Event (for slash commands)
@@ -913,7 +912,6 @@ client.on('messageUpdate', async (oldMessage, newMessage) => {
 	var channel = newMessage.channel;
 	/** @type {Discord.TextChannel} **/
 	var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
-	console.log(`logs ${logs}`);
 	if (logs) {
 		var description = `📎 **${user} edited [a message](https://discord.com/channels/${guild.id}/${channel.id}/${newMessage.id}) in ${channel}.**`;
 		var descLength = description.length - 2;
@@ -962,7 +960,6 @@ client.on('messageDeleteBulk', async (messages) => {
 client.on('guildMemberAdd', async (member) => {
 	const guild = member.guild;
 	const user = member.user;
-	member.roles.add(skripter);
 	client.channels.cache.get('854842141498277908').send(
 		(_.get(discord, `guilds.${guild.id}.joinMessages`) || [
 			"\\:O It's ${user}, thanks for joining!",
@@ -977,6 +974,12 @@ client.on('guildMemberAdd', async (member) => {
 			.replace('${user.tag}', user.tag) // Replace ${user.mention} with the user's mention
 			.replace('${guild}', guild.name) // Replace ${guild} with the guild name
 	); // Gets join messages, shuffles, and replaces format strings with values
+});
+
+client.on('guildMemberRemove', (member) => {
+	var guild = member.guild;
+	var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
+	if (logs) { logs.send(`${member} left ${guild}!`); }
 });
 
 /**

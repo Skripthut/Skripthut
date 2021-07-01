@@ -1,7 +1,7 @@
 {
-    "activations": 54,
+    "activations": 75,
     "lastActivation": "2021-07-01",
-    "totalRegisteredCommands": 46,
+    "totalRegisteredCommands": 84,
     "tickets": {
         "855183990533521438": {
             "id": "855183990533521438",
@@ -40,16 +40,28 @@
             "id": "857632770565865483",
             "description": "Thanks for doing this challenge! Send your code and staff will be here soon.",
             "channel": "855110846328864828"
+        },
+        "860279978368827413": {
+            "id": "860279978368827413",
+            "description": "Beep boop",
+            "channel": "854949456108453908"
+        },
+        "860280122657472534": {
+            "id": "860280122657472534",
+            "description": "Hey!",
+            "channel": "854949456108453908"
         }
     },
     "commands": [
         {
             "name": "close",
-            "description": "Close your current ticket channel"
+            "description": "Close your current ticket channel",
+            "type": 1
         },
         {
             "name": "colourrole",
             "description": "Base command for colour role management",
+            "type": 1,
             "options": [
                 {
                     "type": 1,
@@ -73,11 +85,13 @@
         },
         {
             "name": "tomato",
-            "description": "tomato"
+            "description": "tomato",
+            "type": 1
         },
         {
             "name": "createticket",
             "description": "Create a ticket message in specified channel with specified description",
+            "type": 1,
             "options": [
                 {
                     "type": 7,
@@ -102,6 +116,7 @@
         {
             "name": "reactionrole",
             "description": "Base command for reaction role management",
+            "type": 1,
             "options": [
                 {
                     "type": 1,
@@ -183,6 +198,7 @@
         {
             "name": "role",
             "description": "Obtain information about all/specific roles, or manage the roles of a member",
+            "type": 1,
             "options": [
                 {
                     "type": 1,
@@ -249,6 +265,7 @@
         {
             "name": "ban",
             "description": "Ban a member from the server",
+            "type": 1,
             "options": [
                 {
                     "type": 6,
@@ -306,6 +323,7 @@
         {
             "name": "remindme",
             "description": "Send a reminder at a certain date or after a certain timespan",
+            "type": 1,
             "options": [
                 {
                     "type": 1,
@@ -337,10 +355,11 @@
         },
         {
             "name": "deletecommands",
-            "description": "Delete all commands"
+            "description": "Delete all commands",
+            "type": 1
         }
     ],
-    "totalTickets": 118,
+    "totalTickets": 119,
     "guilds": {
         "854838419677904906": {
             "members": {
@@ -383,6 +402,17 @@
                     "channel": "854840866653208608",
                     "guild": "854838419677904906",
                     "role": "858844163919446027"
+                }
+            }
+        },
+        "854842394351370260": {
+            "id": "854842394351370260",
+            "emotes": {
+                "✅": {
+                    "id": "854842394351370260",
+                    "channel": "854839564181700608",
+                    "guild": "854838419677904906",
+                    "role": "860242610613911553"
                 }
             }
         }
