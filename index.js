@@ -339,7 +339,8 @@ client.on('ready', async () => {
 			}
 		}
 
-		console.log(`${user.tag} executed /${command}`);
+		var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
+		if (logs) { logs.send(`${user.tag} (${user.id}) executed /${command}`); }
 
 		switch(command) {
 			/*
@@ -373,12 +374,12 @@ client.on('ready', async () => {
 					var creator = guild.member(client.users.cache.get(discord.tickets[channel_id].member));
 
 					if (discord.tickets[channel_id].closed) {
-						reply(interaction, 'Closing permanently...', convertToBits(6));
+						reply(interaction, 'Closing permanently...');
 						await channel.delete("Ticket closed permanently");
 						delete discord.tickets[channel_id];
 						break;
 					}
-					reply(interaction, 'Closed...', convertToBits(6));
+					reply(interaction, 'Closed...');
 					const id = creator.id;
 					const type = "member";
 
@@ -388,7 +389,7 @@ client.on('ready', async () => {
 					deleteStat(creator, "hasTicket");
 					discord.tickets[channel_id].closed = true;
 
-					channel.send('__Do `/close` again to permanently close the ticket.__');
+					reply(interaction, '__Do `/close` again to permanently close the ticket.__', convertToBits(7), "FOLLOW_UP");
 					break;
 				}
 				reply(interaction, 'You can only use this in a ticket channel!', convertToBits(6));
@@ -418,8 +419,9 @@ client.on('ready', async () => {
 					var target = guild.member(option.options[0].value);
 					var reason = (option.options[2] || { value: `Granted by ${user.tag}`}).value;
 
-					reply(interaction, `Added ${role} to ${target}'s roles...`, convertToBits(6));
-					target.roles.add(role, reason);
+					reply(interaction, `Adding...`, convertToBits(6));
+					await target.roles.add(role, reason);
+					reply(interaction, `Added ${role} to ${target}'s roles!`, convertToBits(6, 7), "FOLLOW_UP");
 					break;
 				}
 				if (type === 'revoke') {
@@ -673,14 +675,15 @@ client.on('ready', async () => {
 								reply(interaction, embed, convertToBits(6));
 								await member.roles.add(result.id);
 
-								var colourRole = await getStat(member, "colourRole");
+								var colourRole = getStat(member, "colourRole");
 								if(colourRole) {
-									var role = await guild.roles.cache.get(colourRole);
+									var role = guild.roles.cache.get(colourRole);
 									if (role !== null && role !== undefined) {
 										role.delete();
 									}
 								}
 								setStat(member, "colourRole", result.id);
+								reply(interaction, `Added ${result} to your roles!`, convertToBits(6, 7), "FOLLOW_UP");
 							});
 						break;
 					}
@@ -903,10 +906,11 @@ client.on('message', (message) => {
 client.on('messageUpdate', async (oldMessage, newMessage) => {
 	var user = newMessage.author;
 	if (user.bot) { return; }
-	var guild = newMessage.guild;
-	var channel = newMessage.channel;
 	var oldContent = oldMessage.content;
 	var newContent = newMessage.content;
+	if (oldContent === newContent) { return; }
+	var guild = newMessage.guild;
+	var channel = newMessage.channel;
 	/** @type {Discord.TextChannel} **/
 	var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
 	console.log(`logs ${logs}`);
