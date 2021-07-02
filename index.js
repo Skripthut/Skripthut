@@ -1181,12 +1181,12 @@ function getStat(member, key) {
  * @example
  * var ephemeralAndLoading = convertBitsToBitField(6, 7);
 **/
-function convertBitsToBitField(...powers) {
-	var value = 0;
-	for (var number of powers) {
-		value += Math.pow(2, number);
+function convertBitsToBitField(...bits) {
+	var bitField = 0;
+	for (var bit of bits) {
+		bitField += Math.pow(2, bit);
 	}
-	return value;
+	return bitField;
 }
 
 /**
