@@ -1200,7 +1200,7 @@ function convertBitsToBitField(...powers) {
 function convertBitFieldToBits(bitField) {
 	const bits = [];
 	for (var bit = 0; bit < 8; bit++) {
-		if (bitField & Math.pow(2, bit)) { console.log('a bit made it!', bit); bits.push(bit); }
+		if (bitField & Math.pow(2, bit)) { bits.push(bit); }
 	}
 	return bits;
 }
