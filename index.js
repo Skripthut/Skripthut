@@ -17,7 +17,7 @@ const limit = (number, min, max) => Math.max(Math.min(number, max), min);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Returns a shuffled copy of this array. Please advise from using this with massive arrays, since this can produce lag.
+ * Returns a shuffled copy of this array using Fisher-Yates Shuffle. Please advise from using this with massive arrays, since this can produce lag.
  * 
  * @param {number} [totalElements] The total amount of elements to return (this value is limited to the length of the list -- negative or positive -- and defaults to the length of the list if unspecified)
  * @returns {any[]} Returns a shuffled copy of this array
@@ -33,7 +33,7 @@ Array.prototype.shuffle = function(totalElements) {
 	return array.slice(0, totalElements);
 }
 
-console.log([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ].shuffle(8));
+console.log([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ].shuffle());
 
 /**
  * Catches this Promise and runs a callback, and returns this Promise if there are no errors.
@@ -56,7 +56,7 @@ const fs = require(`fs-extra`);
 const _ = require(`lodash`);
 
 const client = new Discord.Client(/*{ ws: { intents: Discord.Intents.PRIVILEGED } }*/);
-var discord = loadJSON('./discord/discord.json');
+const discord = loadJSON('./discord/discord.json');
 
 var skripthut = "https://i.imgur.com/ocMfwH5.png";
 
@@ -349,11 +349,11 @@ client.on('ready', async () => {
 			// CREATETICKET COMMAND
 			case 'createticket':
 				if (!member.hasPermission("MANAGE_MESSAGES")) {
-					reply(interaction, permissionMessage, convertToBits(6));
+					reply(interaction, permissionMessage, convertBitsToBitField(6));
 					break;
 				}
-				await reply(interaction, 'Sending ticket messsage...', convertToBits(6, 7));
-				var ticketChannel = await client.channels.cache.get(args.channel);
+				await reply(interaction, 'Sending ticket messsage...', convertBitsToBitField(6, 7));
+				var ticketChannel = guild.channels.cache.get(args.channel);
 				var message = args.message.replace(/%(n(?:ew)?l(?:ine)?|line ?break)%/g, "\n");
 				/** @type {Discord.Message} **/
 				var sentMessage = await ticketChannel.send(message)
@@ -363,7 +363,7 @@ client.on('ready', async () => {
 					channel: args.channel
 				};
 				await sentMessage.react(`📰`);
-				reply(interaction, 'Sent!', convertToBits(6), "EDIT_INITIAL");
+				reply(interaction, 'Sent!', convertBitsToBitField(6), "EDIT_INITIAL");
 				break;
 				// END CREATETICKET COMMAND
 
@@ -388,10 +388,10 @@ client.on('ready', async () => {
 					deleteStat(creator, "hasTicket");
 					discord.tickets[channel_id].closed = true;
 
-					reply(interaction, '__Do `/close` again to permanently close the ticket.__', convertToBits(7), "FOLLOW_UP");
+					reply(interaction, '__Do `/close` again to permanently close the ticket.__', convertBitsToBitField(7), "FOLLOW_UP");
 					break;
 				}
-				reply(interaction, 'You can only use this in a ticket channel!', convertToBits(6));
+				reply(interaction, 'You can only use this in a ticket channel!', convertBitsToBitField(6));
 				break;
 				// END CLOSE COMMAND
 
@@ -402,7 +402,7 @@ client.on('ready', async () => {
 			// ROLE COMMAND
 			case 'role':
 				if (!member.hasPermission("MANAGE_ROLES")) {
-					reply(interaction, permissionMessage, convertToBits(6));
+					reply(interaction, permissionMessage, convertBitsToBitField(6));
 					break;
 				}
 				var option = options[0];
@@ -412,28 +412,28 @@ client.on('ready', async () => {
 					var highestRole = member.roles.highest;
 					var role = guild.roles.cache.get(option.options[1].value);
 					if (highestRole.position <= role.position) {
-						reply(interaction, `You don't have enough permission to grant ${role}!`, convertToBits(6));
+						reply(interaction, `You don't have enough permission to grant ${role}!`, convertBitsToBitField(6));
 						break;
 					}
 					var target = guild.member(option.options[0].value);
 					var reason = (option.options[2] || { value: `Granted by ${user.tag}`}).value;
 
-					reply(interaction, `Adding...`, convertToBits(6));
+					reply(interaction, `Adding...`, convertBitsToBitField(6));
 					await target.roles.add(role, reason);
-					reply(interaction, `Added ${role} to ${target}'s roles!`, convertToBits(6, 7), "FOLLOW_UP");
+					reply(interaction, `Added ${role} to ${target}'s roles!`, convertBitsToBitField(6, 7), "FOLLOW_UP");
 					break;
 				}
 				if (type === 'revoke') {
 					var highestRole = member.roles.highest;
 					var role = guild.roles.cache.get(option.options[1].value);
 					if (highestRole.position <= role.position) {
-						reply(interaction, `You don't have enough permission to revoke ${role}!`, convertToBits(6));
+						reply(interaction, `You don't have enough permission to revoke ${role}!`, convertBitsToBitField(6));
 						break;
 					}
 					var target = guild.member(option.options[0].value);
 					var reason = (option.options[2] || { value: `Removed by ${user.tag}`}).value;
 
-					reply(interaction, `Removed ${role} from ${target}'s roles...`, convertToBits(6));
+					reply(interaction, `Removed ${role} from ${target}'s roles...`, convertBitsToBitField(6));
 					target.roles.remove(role, reason);
 					break;
 				}
@@ -450,7 +450,7 @@ client.on('ready', async () => {
 								{ name: 'Extra Info', value: 'Do `/close` to close the ticket. You may only have one ticket at a time.'}
 							)
 							.setFooter(`Requested by ${user.tag}`, user.avatarURL());
-						reply(interaction, embed, convertToBits(6));
+						reply(interaction, embed, convertBitsToBitField(6));
 						break;
 					}
 					var roles = Array.from(guild.roles.cache);
@@ -459,17 +459,17 @@ client.on('ready', async () => {
 						var role = roles[i][1];
 						roleInfo[i] = role;
 					}
-					reply(interaction, `${roleInfo}`, convertToBits(6));
+					reply(interaction, `${roleInfo}`, convertBitsToBitField(6));
 					break;
 				}
-				reply(interaction, `noob`, convertToBits(6));
+				reply(interaction, `noob`, convertBitsToBitField(6));
 				break;
 			// END ROLE COMMAND
 
 			// REACTIONROLE COMMAND
 			case 'reactionrole':
 				if (!member.hasPermission("MANAGE_ROLES")) {
-					reply(interaction, permissionMessage, convertToBits(6));
+					reply(interaction, permissionMessage, convertBitsToBitField(6));
 					break;
 				}
 				var option = options[0];
@@ -488,7 +488,7 @@ client.on('ready', async () => {
 					}
 
 					if (!reactionRoleEmoteId) {
-						reply(interaction, `That's not a valid emote!`, convertToBits(6));
+						reply(interaction, `That's not a valid emote!`, convertBitsToBitField(6));
 						break;
 					}
 
@@ -497,7 +497,7 @@ client.on('ready', async () => {
 					var reactionRole = option.options[3].value;
 
 					var sentMessage = reactionRoleChannel.send(reactionRoleMessage);
-					await reply(interaction, 'Sending...', convertToBits(6));
+					await reply(interaction, 'Sending...', convertBitsToBitField(6));
 
 					sentMessage.then(async (message) => {
 						await message.react(reactionRoleEmote);
@@ -514,18 +514,18 @@ client.on('ready', async () => {
 					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
 
 					if (ids[1] !== guild_id) {
-						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, convertToBits(6));
+						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
 					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
 					if (!reactionRoleChannel) {
-						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, convertToBits(6));
+						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
 					var reactionRoleMessageId = ids[3];
 					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
 					if (!reactionRoleMessage) {
-						reply(interaction, `That's not a valid message URL (message ID invalid)!`, convertToBits(6));
+						reply(interaction, `That's not a valid message URL (message ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
 
@@ -541,7 +541,7 @@ client.on('ready', async () => {
 					}
 
 					if (!reactionRoleEmoteId) {
-						reply(interaction, `That's not a valid emote!`, convertToBits(6));
+						reply(interaction, `That's not a valid emote!`, convertBitsToBitField(6));
 						break;
 					}
 
@@ -551,16 +551,16 @@ client.on('ready', async () => {
 					if (_reactionRoleMessage) {
 						const emotes = _reactionRoleMessage.emotes;
 						if (emotes[reactionRoleEmoteId]) {
-							reply(interaction, `This reaction role message already has this emote set!`, convertToBits(6));
+							reply(interaction, `This reaction role message already has this emote set!`, convertBitsToBitField(6));
 							break;
 						}
 						if (JSON.stringify(emotes).includes(reactionRole)) {
-							reply(interaction, `This reaction role message already has this role set!`, convertToBits(6));
+							reply(interaction, `This reaction role message already has this role set!`, convertBitsToBitField(6));
 							break;
 						}
 					}
 
-					await reply(interaction, 'Adding...', convertToBits(6));
+					await reply(interaction, 'Adding...', convertBitsToBitField(6));
 					await reactionRoleMessage.react(reactionRoleEmote);
 					if (!_reactionRoleMessage) {
 						_.set(discord, `reactionRoleMessages.${reactionRoleMessageId}`, 
@@ -577,25 +577,25 @@ client.on('ready', async () => {
 					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
 
 					if (ids[1] !== guild_id) {
-						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, convertToBits(6));
+						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
 					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
 					if (!reactionRoleChannel) {
-						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, convertToBits(6));
+						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
 					var reactionRoleMessageId = ids[3];
 					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
 					if (!reactionRoleMessage) {
-						reply(interaction, `That's not a valid message URL (message ID invalid)!`, convertToBits(6));
+						reply(interaction, `That's not a valid message URL (message ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
 
 					var _reactionRoleMessage = _.get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
 
 					if (!_reactionRoleMessage) {
-						reply(interaction, `This message doesn't have any reaction roles!`, convertToBits(6));
+						reply(interaction, `This message doesn't have any reaction roles!`, convertBitsToBitField(6));
 						break;
 					}
 
@@ -616,17 +616,17 @@ client.on('ready', async () => {
 					}
 
 					if (!reactionRoleEmote) {
-						reply(interaction, `This message doesn't have that role!`, convertToBits(6));
+						reply(interaction, `This message doesn't have that role!`, convertBitsToBitField(6));
 						break;
 					}
 
 					var reactionRole = guild.roles.cache.get(reactionRoleId);
 
-					reply(interaction, `Removing ${reactionRole} from the specified message...`, convertToBits(6));
+					reply(interaction, `Removing ${reactionRole} from the specified message...`, convertBitsToBitField(6));
 					reactionRoleMessage.reactions.resolve(reactionRoleEmote).remove();
 					break;
 				}
-				reply(interaction, 'bruh moment', convertToBits(6));
+				reply(interaction, 'bruh moment', convertBitsToBitField(6));
 				break;
 
 			// COLOURROLE COMMAND
@@ -641,7 +641,7 @@ client.on('ready', async () => {
 					roles.get('854841465087852574')
 				);
 				if (!hasRoles && !member.hasPermission("MANAGE_ROLES")) {
-					reply(interaction, permissionMessage, convertToBits(6));
+					reply(interaction, permissionMessage, convertBitsToBitField(6));
 					break;
 				}
 
@@ -671,7 +671,7 @@ client.on('ready', async () => {
 									.setAuthor('Skripthut', skripthut, skripthut)
 									.setDescription(`Created the colour role ${result}`)
 									.setFooter(`Requested by ${user.tag}`, user.avatarURL());
-								reply(interaction, embed, convertToBits(6));
+								reply(interaction, embed, convertBitsToBitField(6));
 								await member.roles.add(result.id);
 
 								var colourRole = getStat(member, "colourRole");
@@ -682,11 +682,11 @@ client.on('ready', async () => {
 									}
 								}
 								setStat(member, "colourRole", result.id);
-								reply(interaction, `Added ${result} to your roles!`, convertToBits(6, 7), "FOLLOW_UP");
+								reply(interaction, `Added ${result} to your roles!`, convertBitsToBitField(6, 7), "FOLLOW_UP");
 							});
 						break;
 					}
-					reply(interaction, `Please input a valid HEX code as a colour.`, convertToBits(6));
+					reply(interaction, `Please input a valid HEX code as a colour.`, convertBitsToBitField(6));
 					break;
 				}
 				if (type === 'remove') {
@@ -695,13 +695,13 @@ client.on('ready', async () => {
 						if (role !== null && role !== undefined) {
 							await role.delete();
 							deleteStat(member, "colourRole");
-							reply(interaction, 'Deleted your colour role...', convertToBits(6));
+							reply(interaction, 'Deleted your colour role...', convertBitsToBitField(6));
 							break;
 						}
-						reply(interaction, `You have a colour role... but it's invalid`, convertToBits(6));
+						reply(interaction, `You have a colour role... but it's invalid`, convertBitsToBitField(6));
 						break;
 					}
-					reply(interaction, `You currently don't have a colour role...`, convertToBits(6));
+					reply(interaction, `You currently don't have a colour role...`, convertBitsToBitField(6));
 				}
 				break;
 			// END COLOURROLE COMMAND
@@ -711,12 +711,12 @@ client.on('ready', async () => {
 			 */
 			case 'ban':
 				if (!member.hasPermission("BAN_MEMBERS")) {
-					reply(interaction, permissionMessage, convertToBits(6));
+					reply(interaction, permissionMessage, convertBitsToBitField(6));
 					break;
 				}
 
 				var targetMember = await guild.members.fetch(args.member).catchThen(() => {
-					reply(interaction, `That's not a valid member!`, convertToBits(6));
+					reply(interaction, `That's not a valid member!`, convertBitsToBitField(6));
 				});
 				if (!targetMember) {
 					break;
@@ -728,7 +728,7 @@ client.on('ready', async () => {
 				if (details) {
 					console.log(details);
 					if (!details) {
-						reply(interaction, `That's not a valid timespan (where [x] is any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, convertToBits(6));
+						reply(interaction, `That's not a valid timespan (where [x] is any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, convertBitsToBitField(6));
 						break;
 					}
 					_.set(discord.guilds, `${guild_id}.members.${target.id}.banned`, {
@@ -758,7 +758,7 @@ client.on('ready', async () => {
 							{ name: 'Reason', value: reason }
 						)
 						.setFooter(`Banned by ${user.tag}`, user.avatarURL())
-				, convertToBits(6))
+				, convertBitsToBitField(6))
 				break;
 			case 'mute':
 				var hasRoles =
@@ -766,7 +766,7 @@ client.on('ready', async () => {
 					roles.get('854842705363992586')
 				);
 				if (!hasRoles && !member.hasPermission("MANAGE_ROLES")) {
-					reply(interaction, permissionMessage, convertToBits(6));
+					reply(interaction, permissionMessage, convertBitsToBitField(6));
 					break;
 				}
 
@@ -780,7 +780,7 @@ client.on('ready', async () => {
 					var details = await getPunishmentDetails(args.timespan);
 					console.log(details);
 					if (!details) {
-						reply(interaction, `That's not a valid timespan (let [x] be any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, convertToBits(6));
+						reply(interaction, `That's not a valid timespan (let [x] be any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, convertBitsToBitField(6));
 						break;
 					}
 					setStat(targetMember, "banDate", now);
@@ -804,7 +804,7 @@ client.on('ready', async () => {
 							{ name: 'Reason', value: reason }
 						)
 						.setFooter(`Banned by ${user.tag}`, user.avatarURL())
-				, convertToBits(6))
+				, convertBitsToBitField(6))
 				break;
 
 			/*
@@ -843,20 +843,24 @@ client.on('ready', async () => {
 							)
 							.setFooter(`Requested by ${user.tag}`, user.avatarURL());
 							
-						reply(interaction, embed, convertToBits(6));
+						reply(interaction, embed, convertBitsToBitField(6));
 						break;
 					}
 					if (!date) {
-						reply(interaction, `That's not a valid date!`, convertToBits(6));
+						reply(interaction, `That's not a valid date!`, convertBitsToBitField(6));
 						break;
 					}
 				}
 
-				reply(interaction, 'yolo', convertToBits(6));
+				reply(interaction, 'yolo', convertBitsToBitField(6));
+				break;
+
+			case 'test':
+				reply(interaction, 'hello', convertBitsToBitField(7));
 				break;
 
 			default:
-				reply(interaction, 'nani', convertToBits(6));
+				reply(interaction, 'nani', convertBitsToBitField(6));
 		}
 	});
 	client.on('raw', async (packet) => {
@@ -1099,7 +1103,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 						embed.description = `${user.tag} created a ticket`;
 						embed.url = `https://discord.com/channels/${guild.id}/${channel.id}/${message.id}`;
 						embed.fields = { name: 'Ticket Description', value: ticket.description };
-						client.channels.cache.get('854847882904731convertToBits(6)8').send(embed);
+						client.channels.cache.get('854847882904731convertBitsToBitField(6)8').send(embed);
 					});
 				}, 250);
 			});
@@ -1168,18 +1172,37 @@ function getStat(member, key) {
 }
 
 /**
- * Converts powers to bits
+ * Converts bits to bit field
  * 
- * @param {number[]} powers The powers of the bits
+ * @param {number[]} bits The bits of the bit field
+ * @returns {number} The bit field of the bits
+ * 
  * @example
- * var ephemeralAndLoading = convertToBits(6, 7);
+ * var ephemeralAndLoading = convertBitsToBitField(6, 7);
 **/
-function convertToBits(...powers) {
+function convertBitsToBitField(...powers) {
 	var value = 0;
 	for (var number of powers) {
 		value += Math.pow(2, number);
 	}
 	return value;
+}
+
+/**
+ * Converts bit field to bits
+ * 
+ * @param {number} bitField The bit field
+ * @returns {number[]} The bits of the bit field
+ * 
+ * @example
+ * var ephemeralAndLoading = convertBitFieldToBits(192); // [ 6, 7 ]
+**/
+function convertBitFieldToBits(bitField) {
+	const bits = [];
+	for (var bit = 0; bit < 8; bit++) {
+		if (bitField & Math.pow(2, bit)) { console.log('a bit made it!', bit); bits.push(bit); }
+	}
+	return bits;
 }
 
 /**
@@ -1205,10 +1228,11 @@ function convertToBits(...powers) {
  * 
  * LOADING	1 << 7	this message is an Interaction Response and the bot is "thinking"
  * 
- * @param {("EDIT_INITIAL" | "DELETE_INTIAL" | "FOLLOW_UP" | "EDIT_SENT" | "SEND")} type The type of Interaction Response
+ * @param {("EDIT_INITIAL" | "DELETE_INTIAL" | "FOLLOW_UP" | "EDIT_SENT" | "SEND")} type The type of Interaction Response. Defaults to "SEND" if the LOADING flag is not set, else "EDIT_INITIAL"
 **/
-async function reply(interaction, response, flags, type = "SEND") {
-	//console.log('interaction', interaction);
+async function reply(interaction, response, flags, type = "SEND") {	
+	if (!["EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"].includes(type)) { throw new Error(`${type} is not a valid response type`); }
+
 	const data = (typeof response === 'object') ? await createAPIMessage(interaction, response) : { content: response }
 	data.flags = flags;
 	const followUpData = { data: data };
