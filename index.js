@@ -856,6 +856,7 @@ client.on('ready', async () => {
 				break;
 
 			case 'test':
+				console.log('convert', convertBitsToBitField(7));
 				reply(interaction, 'hello', convertBitsToBitField(7));
 				break;
 
