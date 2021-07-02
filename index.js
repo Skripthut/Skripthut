@@ -1228,7 +1228,7 @@ function convertBitFieldToBits(bitField) {
  * 
  * LOADING	1 << 7	this message is an Interaction Response and the bot is "thinking"
  * 
- * @param {("EDIT_INITIAL" | "DELETE_INTIAL" | "FOLLOW_UP" | "EDIT_SENT" | "SEND")} type The type of Interaction Response. Defaults to "SEND" if the LOADING flag is not set, else "EDIT_INITIAL"
+ * @param {("EDIT_INITIAL" | "DELETE_INTIAL" | "FOLLOW_UP" | "EDIT_SENT" | "SEND")} type The type of Interaction Response.
 **/
 async function reply(interaction, response, flags, type = "SEND") {	
 	if (!["EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"].includes(type)) { throw new Error(`${type} is not a valid response type`); }
