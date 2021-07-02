@@ -48,6 +48,7 @@ Promise.prototype.catchThen = async function(catchCallback) {
 	return this;
 }
 
+require(`dotenv`).config({ path: './secrets/client.env/' });
 /**
  * @module Discord
 **/
@@ -857,7 +858,7 @@ client.on('ready', async () => {
 
 			case 'test':
 				console.log('convert', convertBitsToBitField(4, 7));
-				reply(interaction, 'hello', convertBitsToBitField(7));
+				reply(interaction, 'hello', convertBitsToBitField(4, 7));
 				break;
 
 			default:
