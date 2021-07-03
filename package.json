@@ -1,10 +1,10 @@
 {
-  "name": "Skripthut",
-  "version": "1.0.0",
+  "name": "skripthut-bot",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node test/main.js"
+    "run": "node index.js"
   },
   "keywords": [],
   "author": "",
