@@ -14,7 +14,9 @@ Formatted all in order. If empty, delete object (delete `[]` and `{}`).
 Format the same for nested JSON.
 ***
 #### **To-Do:**
-- Change discord.json to maps??
-- Change discord.json to a database
-- Finish /role Command
-- Add /send Command
+- Change discord.json to maps?? — LOWEST
+- Change discord.json to a database — LOWEST
+- Finish /role Command — LOW
+- Finish /addon Command — HIGH
+- Add /send Command — LOWEST
+- Add /docs Command — HIGH

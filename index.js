@@ -10,11 +10,29 @@
 const limit = (number, min, max) => Math.max(Math.min(number, max), min);
 
 /**
+ * Format a number of bytes to KB, MB, GB, TB, etc.
+ * 
+ * @param {number} bytes The number of bytes to format
+ * @param {number} decimals The decimal precision of the formatted string (2 = 0.01, 3 = 0.001)
+**/
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) { return '0 Bytes'; }
+
+    const k = 1024;
+    const dm = (decimals < 0) ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
+/**
  * Sleeps for a certain amount of time (specified in milliseconds)
  * 
  * @param ms The amount of milliseconds to wait before continuing
 **/
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Returns a shuffled copy of this array using Fisher-Yates Shuffle. Please advise from using this with massive arrays, since this can produce lag.
@@ -38,17 +56,19 @@ console.log([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ].shuffle())
 /**
  * Catches this Promise and runs a callback, and returns this Promise if there are no errors.
  * 
+ * @param {Promise} promise The promise to catch
  * @param {Function} catchCallback The callback to run on catch.
  * @returns This Promise
 **/
-Promise.prototype.catchThen = async function(catchCallback) {
+async function catchThen(promise, catchCallback) {
 	var caught;
-	await this.catch(() => { catchCallback(); caught = true; });
+	await promise.catch(() => { catchCallback(); caught = true; });
 	if (caught) { return; }
-	return this;
+	return promise;
 }
 
 require(`dotenv`).config({ path: './secrets/client.env/' });
+const axios = require(`axios`);
 /**
  * @module Discord
 **/
@@ -343,6 +363,95 @@ client.on('ready', async () => {
 		if (logs) { logs.send(`${user.tag} (${user.id}) executed /${command}`); }
 
 		switch(command) {
+			/*
+			 * Skript Commands
+			 */
+
+			// ADDON COMMAND
+			case 'addon':
+				const response = await catchThen(axios.get(`https://api.skripttools.net/v4/addons/`), (error) => {
+					console.error(error);
+					reply(interaction, `Error: Unable to get addon list (https://api.skripttools.net/v4/addons/)`);
+				});
+				if (!response) { return; }
+
+				if (args.name === "list") {
+					reply(interaction, `Hi`, convertBitsToBitField(6));
+					break;
+				}
+
+			
+				reply(interaction, `Sending...`, convertBitsToBitField(7));
+
+				/**
+				 * Gets addon info from a specified JAR file
+				 * 
+				 * @param {string} addon The JAR file of the addon
+				 * @returns 
+				 * {{
+				 * author: [],
+				 * description: string,
+
+				 * plugin: string,
+				 * version: string,
+				 * bytes: string,
+				 * plugin: string,
+				 * version: string,
+				 * bytes: string,
+				 * download: string,
+				 * website?: string,
+				 * sourcecode?: string,
+				 * depend: {}
+				 * }} The info of the addon
+				**/
+				async function getAddonInfo(addon) {
+					//const file = 
+					const response = await catchThen(axios.get(`https://api.skripttools.net/v4/addons/${addon}/`), (error) => {
+						console.error(error);
+						reply(interaction, `Error: Unable to get addon info (<https://api.skripttools.net/v4/addons/${addon}/>)`);
+					});
+					if (!response) { return; }
+					return response.data.data;
+				}
+
+				const name = args.name.toLowerCase();
+
+				const data = response.data.data;
+				for (const addon in data) {
+					if (addon.toLowerCase().includes(name)) {
+						const files = data[addon];
+						const file = files[files.length - 1];
+						const addonInfo = await getAddonInfo(file);
+						
+						if (!addonInfo) { return; }
+					
+						const download = addonInfo.download;
+						const depends = addonInfo.depend;
+						const fields = [
+							{ name: 'Addon', value: `**${addonInfo.plugin}** by **${addonInfo.author.join(", ")}**`, inline: true },
+							//{ name: 'Description', value: addonInfo.description, inline: true },
+							{ name: 'Soft Depends', value: depends.softdepend.join(", "), inline: true }
+						];
+						if (addonInfo.sourcecode) { fields.push({ name: 'Source Code', value: addonInfo.sourcecode, inline: true }); }
+						fields.push({ name: `Download (${formatBytes(parseInt(addonInfo.bytes))})`, value: download });
+
+						const embed = new Discord.MessageEmbed()
+							.setColor('#0099ff')
+							.setTitle(`${addonInfo.plugin} ${addonInfo.version}`)
+							.setURL(download)
+							.setDescription(addonInfo.description)
+							.addFields(fields)
+							.setFooter(`Powered by SkriptTools`);
+
+						reply(interaction, embed, convertBitsToBitField(), "EDIT_INITIAL");
+						return;
+					}
+				}
+
+				reply(interaction, `Hi`, convertBitsToBitField(6));
+				break;
+				// END ADDON COMMAND
+
 			/*
 			 * Reaction Commands
 			 */
@@ -716,7 +825,7 @@ client.on('ready', async () => {
 					break;
 				}
 
-				var targetMember = await guild.members.fetch(args.member).catchThen(() => {
+				var targetMember = await catchThen(guild.members.fetch(args.member), () => {
 					reply(interaction, `That's not a valid member!`, convertBitsToBitField(6));
 				});
 				if (!targetMember) {
@@ -1235,36 +1344,43 @@ function convertBitFieldToBits(bitField) {
 async function reply(interaction, response, flags, type = "SEND") {	
 	if (!["EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"].includes(type)) { throw new Error(`${type} is not a valid response type`); }
 
-	const data = (typeof response === 'object') ? await createAPIMessage(interaction, response) : { content: response }
+	var data = (typeof response === 'object') ? await createAPIMessage(interaction, response) : { content: response }
 	data.flags = flags;
 	const followUpData = { data: data };
 
 	switch(type) { // "EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"
 		case "EDIT_INITIAL":
 			client.api.webhooks(client.user.id, interaction.token).messages("@original").patch(followUpData);
-			break;
+			return;
 
 		case "DELETE_INTIAL":
 			client.api.webhooks(client.user.id, interaction.token).messages("@original").delete();
-			break;
+			return;
 
 		case "FOLLOW_UP":
 			client.api.webhooks(client.user.id, interaction.token).post(followUpData);
-			break;
+			return;
 
 		case "EDIT_SENT":
 			client.api.webhooks(client.user.id, interaction.token).messages(interaction.id).patch(followUpData);
-			break;
+			return;
 
 		case "SEND":
+			if (convertBitFieldToBits(flags).includes(7)) {
+				data = { flags: flags };
+				var responseType = 5;
+			}
+			else {
+				var responseType = 4;
+			}
 			client.api.interactions(interaction.id, interaction.token).callback.post(
 			{
 				data: {
-					type: 4,
+					type: responseType || 4,
 					data
 				}
 			});
-			break;
+			return;
 
 		default:
 			throw new Error(`${type} is not a valid Interaction Response type`);
