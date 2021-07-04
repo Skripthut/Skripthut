@@ -60,7 +60,7 @@ console.log([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ].shuffle())
  * @param {Function} catchCallback The callback to run on catch.
  * @returns This Promise
 **/
-async function catchThen(promise, catchCallback) {
+async function catchAwait(promise, catchCallback) {
 	var caught;
 	await promise.catch(() => { catchCallback(); caught = true; });
 	if (caught) { return; }
@@ -68,6 +68,7 @@ async function catchThen(promise, catchCallback) {
 }
 
 require(`dotenv`).config({ path: './secrets/client.env/' });
+const htmlEntities = require(`html-entities`);
 const axios = require(`axios`);
 /**
  * @module Discord
@@ -182,9 +183,11 @@ async function deleteCommands(guildId) {
 	const commands = getApp(guildId).commands;
 	const awaitCommands = await commands.get();
 	for (const command of awaitCommands) {
+		console.log('deleting', command.name)
 		var deleteCommand = getApp(guildId).commands(command.id);
 		await deleteCommand.delete();
 	}
+	console.log('deleted');
 	return true;
 }
 /**
@@ -294,11 +297,204 @@ async function getPunishmentDetails(millisTimespan) {
 	};
 }
 
+/**
+ * Gets addon info from a specified JAR file
+ * 
+ * @param {string} addon The JAR file of the addon
+ * @returns 
+ * {{
+ * author: [],
+ * description: string,
+ * plugin: string,
+ * version: string,
+ * bytes: string,
+ * plugin: string,
+ * version: string,
+ * bytes: string,
+ * download: string,
+ * website?: string,
+ * sourcecode?: string,
+ * depend: {}
+ * }} The info of the addon
+**/
+async function getAddonInfo(addon) {
+	const response = await catchAwait(axios.get(`https://api.skripttools.net/v4/addons/${addon}/`), (error) => {
+		console.error(error);
+		reply(interaction, `Error: Unable to get addon info (<https://api.skripttools.net/v4/addons/${addon}/>)`);
+	});
+	if (!response) { return; }
+	return response.data.data;
+}
+
+/**
+ * Get addon info from a partial name
+ * 
+ * @param {string} name The partial name to search for
+ * @returns 
+**/
+async function getAddon(name) {
+	var response = await catchAwait(axios.get(`https://api.skripttools.net/v4/addons`), (error) => {
+		console.error(error);
+		reply(interaction, `Error: Unable to get addon list (https://api.skripttools.net/v4/addons/)`);
+	});
+	if (!response) { return; }
+
+	var data = response.data.data;
+	for (const addon in data) {
+		if (addon.toLowerCase().includes(name)) { return { name: addon, files: data[addon]}; }
+	}
+	return;
+}
+
+/**
+ * Get syntax using a key word, plus an optional type and plugin
+ * 
+ * @param {string} keyword The key word to search
+ * @param {string} [type] The doc type to search (event, expression, effect, condition, or type)
+ * @param {string} [plugin] The plugin to search (i.e. Skript, SkBee, TuSKe)
+ * @returns {Promise<any[]>} All syntaxes that match `keyword` (ID or partial name)
+**/
+async function getSyntaxList(keyword, type, plugin) {
+	if (!type && !plugin) {
+		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getAllSyntax`), (error) => {
+			console.error(error);
+			reply(interaction, `Error: Unable to get all syntax (https://docs.skunity.com/api/?key=${skUnityKey}&function=getAllSyntax/)`);
+		});
+		if (!response) { return; }
+
+		return response.data.result.filter(syntax => syntax.id === keyword || syntax.name.toLowerCase().includes(keyword));
+	}
+
+	var syntaxList = [];
+	var total = 0;
+	if (type) {
+		total++;
+		console.log('type', type, total);
+		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getDocTypeSyntax&doctype=${type}`), (error) => {
+			console.error(error);
+			reply(interaction, `Error: Unable to get doc type syntax (https://docs.skunity.com/api/?key=${skUnityKey}&function=getDocTypeSyntax&doctype=${type}/)`);
+		});
+		if (!response) { return syntaxList; }
+
+		syntaxList = response.data.result.filter(syntax => syntax.id === keyword || syntax.name.toLowerCase().includes(keyword));
+	}
+	if (plugin) {
+		total++;
+		console.log('plugin', plugin, total);
+		var addon = plugin !== 'skript' ? (await getAddon(plugin)).name : plugin;
+		console.log('addon', addon, total);
+		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getAddonSyntax&addon=${addon}`), (error) => {
+			console.error(error);
+			reply(interaction, `Error: Unable to get doc type syntax (https://docs.skunity.com/api/?key=${skUnityKey}&function=getAddonSyntax&addon=${addon}/)`);
+		});
+		if (!response) { return syntaxList; }
+
+		syntaxList.push(...response.data.result.filter(syntax => syntax.id === keyword || syntax.name.toLowerCase().includes(keyword)));
+	}
+
+	if (total > 1) {
+		var amount = {};
+		return syntaxList.filter(syntax => {
+			if (!amount[syntax.id]) { amount[syntax.id] = 0; }
+			amount[syntax.id]++;
+			console.log(syntax.name, amount[syntax.id], total, (amount[syntax.id] === total));
+			return (amount[syntax.id] === total);
+		});
+	}
+	return syntaxList;
+}
+
+/**
+ * Checks if a string is empty or not set
+ * 
+ * @param {string} string The string to check
+**/
+function isEmpty(string) {
+	return (string === undefined || string.desc === '');
+}
+
+/**
+ * Cover a text with a markdown code block
+ * 
+ * @param {string} string The text to put in the code block
+ * @param {string} format The markdown code format for the code block
+ * @returns The code block with `string` inside it
+**/
+function getCodeBlock(string, format = 'vb') {
+	return `\`\`\`${format}\n${string}\`\`\``;
+}
+
+class SkriptSyntax {
+	/**
+	 * Get access to SkriptSyntax methods using a syntax object
+	 * 
+	 * @param
+	 * {{
+	 * id: string,
+	 * name: string,
+	 * doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'),
+	 * desc: string,
+	 * addon: string,
+	 * version: string,
+	 * pattern: string,
+	 * plugin: string,
+	 * eventvalues: string,
+	 * changers: string,
+	 * returntype: string,
+	 * is_array: ('0' | '1'),
+	 * tags: string,
+	 * reviewed: ('true' | 'false'),
+	 * versions: string
+	 * }} syntax The syntax object to convert to a SkriptSyntax object
+	 * @returns The new SkriptSyntax object
+	**/
+	constructor(syntax) {
+		for (var key in syntax) {
+			this[key] = syntax[key];
+		}
+	}
+
+	/**
+	 * Get the example of this SkriptSyntax
+	 * 
+	 * @returns {string} The example of this SkriptSyntax
+	**/
+	async getExample() {
+		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getExamplesByID&syntax=${this.id}`),console.error);
+		if (!response) { return; }
+
+		return htmlEntities.decode(response.data.result[0].example);
+	}
+
+	/**
+	 * Get a formatted embed using this SkriptSyntax properties
+	 * 
+	 * @param {string} [example] The example of this syntax (use this.getExample() method)
+	 * @returns A formatted embed using this SkriptSyntax
+	**/
+	getEmbed(example) {
+		var fields = [
+			{ name: 'Pattern', value: getCodeBlock(this.pattern) }
+		];
+		if (!isEmpty(this.desc)) { fields.push({ name: 'Description', value: this.desc }); }
+		if (!isEmpty(example)) { fields.push({ name: 'Example', value: getCodeBlock(example) }); }
+		fields.push({ name: 'Addon', value: this.addon, inline: true }, { name: 'Requires', value: 'Skript', inline: true });
+
+		return new Discord.MessageEmbed()
+		    .setTitle(this.name)
+			.setURL(`https://docs.skunity.com/syntax/search/id:${this.id}`)
+			.addFields(fields);
+	}
+}
+
 var permissionMessage;
 var guildId;
 var guild;
 var skripter;
 var tickets;
+
+var skUnityKey;
+var noResults;
 client.on('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`);
 
@@ -307,6 +503,9 @@ client.on('ready', async () => {
 	guild = client.guilds.cache.get(guildId);
 	skripter = "860242610613911553";
 	tickets = "854954327268786227";
+
+	skUnityKey = "58b93076b6269edd";
+	noResults = "https://i.imgur.com/AjlWaz5.png";
 
 	await registerCommands(guildId);
 
@@ -369,88 +568,68 @@ client.on('ready', async () => {
 
 			// ADDON COMMAND
 			case 'addon':
-				const response = await catchThen(axios.get(`https://api.skripttools.net/v4/addons/`), (error) => {
-					console.error(error);
-					reply(interaction, `Error: Unable to get addon list (https://api.skripttools.net/v4/addons/)`);
-				});
-				if (!response) { return; }
-
-				if (args.name === "list") {
+				if (!args.name) {
 					reply(interaction, `Hi`, convertBitsToBitField(6));
 					break;
 				}
-
 			
 				reply(interaction, `Sending...`, convertBitsToBitField(7));
 
-				/**
-				 * Gets addon info from a specified JAR file
-				 * 
-				 * @param {string} addon The JAR file of the addon
-				 * @returns 
-				 * {{
-				 * author: [],
-				 * description: string,
+				var addon = await getAddon(args.name.toLowerCase());
+				if (!addon) {
+					var embed = new Discord.MessageEmbed()
+						.setColor('#ff0f0f')
+						.setTitle('No Addon Found')
+						.setDescription('No addons were found with that search')
+						.setThumbnail(noResults)
+						.setFooter(`Error ${interaction.id}`);
 
-				 * plugin: string,
-				 * version: string,
-				 * bytes: string,
-				 * plugin: string,
-				 * version: string,
-				 * bytes: string,
-				 * download: string,
-				 * website?: string,
-				 * sourcecode?: string,
-				 * depend: {}
-				 * }} The info of the addon
-				**/
-				async function getAddonInfo(addon) {
-					//const file = 
-					const response = await catchThen(axios.get(`https://api.skripttools.net/v4/addons/${addon}/`), (error) => {
-						console.error(error);
-						reply(interaction, `Error: Unable to get addon info (<https://api.skripttools.net/v4/addons/${addon}/>)`);
-					});
-					if (!response) { return; }
-					return response.data.data;
+					reply(interaction, embed, 0, "EDIT_INITIAL");
+					return;
 				}
 
-				const name = args.name.toLowerCase();
+				var files = addon.files;
+				var file = files[files.length - 1];
+				var addonInfo = await getAddonInfo(file);
+				
+				if (!addonInfo) { return; }
+			
+				var download = addonInfo.download;
+				var depends = addonInfo.depend;
+				var fields = [{ name: 'Addon', value: `**${addonInfo.plugin}** by **${addonInfo.author.join(", ")}**`, inline: true }];
+				if (depends.softdepend) { fields.push({ name: 'Soft Depends', value: depends.softdepend.join(", "), inline: true }); }
+				if (addonInfo.sourcecode) { fields.push({ name: 'Source Code', value: addonInfo.sourcecode, inline: true }); }
+				fields.push({ name: `Download (${formatBytes(parseInt(addonInfo.bytes))})`, value: download });
 
-				const data = response.data.data;
-				for (const addon in data) {
-					if (addon.toLowerCase().includes(name)) {
-						const files = data[addon];
-						const file = files[files.length - 1];
-						const addonInfo = await getAddonInfo(file);
-						
-						if (!addonInfo) { return; }
-					
-						const download = addonInfo.download;
-						const depends = addonInfo.depend;
-						const fields = [
-							{ name: 'Addon', value: `**${addonInfo.plugin}** by **${addonInfo.author.join(", ")}**`, inline: true },
-							//{ name: 'Description', value: addonInfo.description, inline: true },
-							{ name: 'Soft Depends', value: depends.softdepend.join(", "), inline: true }
-						];
-						if (addonInfo.sourcecode) { fields.push({ name: 'Source Code', value: addonInfo.sourcecode, inline: true }); }
-						fields.push({ name: `Download (${formatBytes(parseInt(addonInfo.bytes))})`, value: download });
+				var embed = new Discord.MessageEmbed()
+					.setColor('#0099ff')
+					.setTitle(`${addonInfo.plugin} ${addonInfo.version}`)
+					.setURL(download)
+					.setDescription(addonInfo.description || "No description")
+					.addFields(fields)
+					.setFooter(`Powered by SkriptTools`);
 
-						const embed = new Discord.MessageEmbed()
-							.setColor('#0099ff')
-							.setTitle(`${addonInfo.plugin} ${addonInfo.version}`)
-							.setURL(download)
-							.setDescription(addonInfo.description)
-							.addFields(fields)
-							.setFooter(`Powered by SkriptTools`);
-
-						reply(interaction, embed, convertBitsToBitField(), "EDIT_INITIAL");
-						return;
-					}
-				}
-
-				reply(interaction, `Hi`, convertBitsToBitField(6));
-				break;
+				reply(interaction, embed, 0, "EDIT_INITIAL");
+				return;
 				// END ADDON COMMAND
+
+			// DOCS COMMAND
+			case 'docs':
+				reply(interaction, "Getting syntax...", convertBitsToBitField(7));
+				var keyword = args.keyword.toLowerCase();
+				if (args.type) { var type = args.type.toLowerCase(); };
+				if (args.from) { var plugin = args.from.toLowerCase(); }
+
+				var syntaxList = await getSyntaxList(keyword, type, plugin);
+				if (!syntaxList.length) { reply(interaction, `Nope`, 0, "EDIT_INITIAL"); return; }
+
+				var syntax = new SkriptSyntax(syntaxList[0]);
+				console.log(syntax);
+				var embed = syntax.getEmbed(await syntax.getExample())
+					.setFooter(`Powered by skUnity Docs 2 | ${interaction.id}`);
+				reply(interaction, embed, 0, "EDIT_INITIAL");
+				break;
+				// END DOCS COMMAND
 
 			/*
 			 * Reaction Commands
@@ -825,7 +1004,7 @@ client.on('ready', async () => {
 					break;
 				}
 
-				var targetMember = await catchThen(guild.members.fetch(args.member), () => {
+				var targetMember = await catchAwait(guild.members.fetch(args.member), () => {
 					reply(interaction, `That's not a valid member!`, convertBitsToBitField(6));
 				});
 				if (!targetMember) {
@@ -966,8 +1145,10 @@ client.on('ready', async () => {
 				break;
 
 			case 'test':
-				console.log('convert', convertBitsToBitField(4, 7));
 				reply(interaction, 'hello', convertBitsToBitField(4, 7));
+				setTimeout(function() {
+					reply(interaction, ':O', convertBitsToBitField(4), "EDIT_INITIAL");
+				}, 10000);
 				break;
 
 			default:
