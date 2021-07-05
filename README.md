@@ -19,4 +19,5 @@ Format the same for nested JSON.
 - Finish /role Command — LOW
 - Finish /addon Command (add list) - MEDIUM
 - Finish /docs Command (add pagination) — HIGH
+- Finish /mute Command - MEDIUM
 - Add /send Command — LOWEST

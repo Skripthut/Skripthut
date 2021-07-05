@@ -83,6 +83,15 @@ const discord = loadJSON('./discord/discord.json');
 var skripthut = "https://i.imgur.com/ocMfwH5.png";
 
 /**
+ * Color base for simple colours
+**/
+const Color = {
+	Error: '#ff2f2f',
+	Yellow: '#ffff0f',
+	Lime: '#00ff00'
+}
+
+/**
  * The ReactionRoleEmote class for reaction roles.
 **/
 class ReactionRoleEmote {
@@ -409,9 +418,7 @@ async function getSyntaxList(keyword, type, plugin) {
  * 
  * @param {string} string The string to check
 **/
-function isEmpty(string) {
-	return (string === undefined || string.desc === '');
-}
+const isEmpty = (string) => (string === undefined || string === '');
 
 /**
  * Cover a text with a markdown code block
@@ -420,9 +427,7 @@ function isEmpty(string) {
  * @param {string} format The markdown code format for the code block
  * @returns The code block with `string` inside it
 **/
-function getCodeBlock(string, format = 'vb') {
-	return `\`\`\`${format}\n${string}\`\`\``;
-}
+const getCodeBlock = (string, format = 'vb') => `\`\`\`${format}\n${string}\`\`\``;
 
 class SkriptSyntax {
 	/**
@@ -460,8 +465,9 @@ class SkriptSyntax {
 	 * @returns {string} The example of this SkriptSyntax
 	**/
 	async getExample() {
-		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getExamplesByID&syntax=${this.id}`),console.error);
+		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getExamplesByID&syntax=${this.id}`), console.error);
 		if (!response) { return; }
+		if (!response.data.result[0]) { return; }
 
 		return htmlEntities.decode(response.data.result[0].example);
 	}
@@ -481,6 +487,7 @@ class SkriptSyntax {
 		fields.push({ name: 'Addon', value: this.addon, inline: true }, { name: 'Requires', value: 'Skript', inline: true });
 
 		return new Discord.MessageEmbed()
+			.setColor(Color.Yellow)
 		    .setTitle(this.name)
 			.setURL(`https://docs.skunity.com/syntax/search/id:${this.id}`)
 			.addFields(fields);
@@ -577,14 +584,14 @@ client.on('ready', async () => {
 
 				var addon = await getAddon(args.name.toLowerCase());
 				if (!addon) {
-					var embed = new Discord.MessageEmbed()
-						.setColor('#ff0f0f')
-						.setTitle('No Addon Found')
-						.setDescription('No addons were found with that search')
-						.setThumbnail(noResults)
-						.setFooter(`Error ${interaction.id}`);
-
-					reply(interaction, embed, 0, "EDIT_INITIAL");
+					reply(interaction, 
+						new Discord.MessageEmbed()
+							.setColor(Color.Error)
+							.setTitle('No Addon Found')
+							.setDescription('No addons were found with that search')
+							.setThumbnail(noResults)
+							.setFooter(`Error | ${interaction.id}`)
+						, 0, "EDIT_INITIAL");
 					return;
 				}
 
@@ -596,13 +603,13 @@ client.on('ready', async () => {
 			
 				var download = addonInfo.download;
 				var depends = addonInfo.depend;
-				var fields = [{ name: 'Addon', value: `**${addonInfo.plugin}** by **${addonInfo.author.join(", ")}**`, inline: true }];
+				var fields = [{ name: 'Addon', value: `**${addonInfo.plugin} ${addonInfo.version}** by **${addonInfo.author.join(", ")}**`, inline: true }];
 				if (depends.softdepend) { fields.push({ name: 'Soft Depends', value: depends.softdepend.join(", "), inline: true }); }
 				if (addonInfo.sourcecode) { fields.push({ name: 'Source Code', value: addonInfo.sourcecode, inline: true }); }
 				fields.push({ name: `Download (${formatBytes(parseInt(addonInfo.bytes))})`, value: download });
 
 				var embed = new Discord.MessageEmbed()
-					.setColor('#0099ff')
+					.setColor(Color.Lime)
 					.setTitle(`${addonInfo.plugin} ${addonInfo.version}`)
 					.setURL(download)
 					.setDescription(addonInfo.description || "No description")
@@ -621,10 +628,19 @@ client.on('ready', async () => {
 				if (args.from) { var plugin = args.from.toLowerCase(); }
 
 				var syntaxList = await getSyntaxList(keyword, type, plugin);
-				if (!syntaxList.length) { reply(interaction, `Nope`, 0, "EDIT_INITIAL"); return; }
+				if (!syntaxList.length) { 
+					reply(interaction, 
+						new Discord.MessageEmbed()
+							.setColor(Color.Error)
+							.setTitle('No Results')
+							.setDescription('No results were found for that query')
+							.setThumbnail(noResults)
+							.setFooter(`Error | ${interaction.id}`),
+					0, "EDIT_INITIAL");
+					return;
+				}
 
 				var syntax = new SkriptSyntax(syntaxList[0]);
-				console.log(syntax);
 				var embed = syntax.getEmbed(await syntax.getExample())
 					.setFooter(`Powered by skUnity Docs 2 | ${interaction.id}`);
 				reply(interaction, embed, 0, "EDIT_INITIAL");
@@ -1038,7 +1054,7 @@ client.on('ready', async () => {
 				console.log(now, details.milliseconds);
 				reply(interaction,
 					new Discord.MessageEmbed()
-						.setColor('#ff2f2f')
+						.setColor(Color.Error)
 						.setAuthor(target.tag, target.avatarURL(), target.avatarURL())
 						.setDescription(`Details for ${target}'s ban from ${guild.name}`)
 						.addFields(
@@ -1083,7 +1099,7 @@ client.on('ready', async () => {
 				console.log(now, details.milliseconds);
 				reply(interaction,
 					new Discord.MessageEmbed()
-						.setColor('#ff2f2f')
+						.setColor(Color.Error)
 						.setTitle('Ban Details')
 						.setAuthor(target.tag, target.avatarURL(), target.avatarURL())
 						.setDescription(`Details for ${target}'s ban from ${guild.name}`)
