@@ -10,17 +10,17 @@
 const limit = (number, min, max) => Math.max(Math.min(number, max), min);
 
 /**
- * Format a number of bytes to KB, MB, GB, TB, etc.
+ * Format a number of bytes to KiB, MiB, GiB, TiB, etc.
  * 
  * @param {number} bytes The number of bytes to format
  * @param {number} decimals The decimal precision of the formatted string (2 = 0.01, 3 = 0.001)
 **/
 function formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) { return '0 Bytes'; }
+    if (bytes <= 0) { return '0 Bytes'; }
 
     const k = 1024;
-    const dm = (decimals < 0) ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const dm = Math.max(0, decimals);
+    const sizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
 
     const i = Math.floor(Math.log(bytes) / Math.log(k));
 
@@ -78,17 +78,109 @@ const fs = require(`fs-extra`);
 const _ = require(`lodash`);
 
 const client = new Discord.Client(/*{ ws: { intents: Discord.Intents.PRIVILEGED } }*/);
-const discord = loadJSON('./discord/discord.json');
+const discord = loadJSON('./database/discord.json');
 
-var skripthut = "https://i.imgur.com/ocMfwH5.png";
+var metadata = {};
+/**
+ * Sets metadata tag of an object
+ * 
+ * @param object The object whose metadata to set (works as long as an id property is set)
+ * @param {string} tag The metadata tag to set (works recursively)
+ * @param value The value to set to
+ * @param {number} lifespan The optional lifespan of the metadata (deletes after specified lifespan)
+ * @returns Returns the new metadata object
+**/
+function setMetadata(object, tag, value, lifespan) {
+	if (!object.id) { return; }
+	tag = `${object.constructor.name}.${object.id}.${tag}`;
+	if (lifespan) {
+		var now = Date.now();
+		metadata[tag] = now;
+		setTimeout(function() {
+			if (metadata[tag] === now) { _.unset(metadata, tag); delete metadata[tag]; }
+		}, lifespan);
+	}
+	return _.set(metadata, tag, value);
+}
+
+/**
+ * Gets metadata tag of an object
+ * 
+ * @param object The object whose metadata to get (works as long as an id property is set)
+ * @param {string} tag The metadata tag to get (works recursively)
+ * @returns Returns the metadata tag of the object
+**/
+function getMetadata(object, tag) {
+	if (!object.id) { return; }
+	tag = `${object.constructor.name}.${object.id}.${tag}`;
+	delete metadata[tag];
+	return _.get(metadata, tag);
+}
+
+/**
+ * Deletes metadata tag of an object
+ * 
+ * @param object The object whose metadata to delete (works as long as an id property is set)
+ * @param {string} tag The metadata tag to delete (works recursively)
+ * @returns Returns true if the metadata tag is deleted, else false
+**/
+function deleteMetadata(object, tag) {
+	if (!object.id) { return; }
+	return _.unset(metadata, `${object.constructor.name}.${object.id}.${tag}`);
+}
+
+/**
+ * Sets persistent value of an object
+ * 
+ * @param object The object whose persistent value to set (works as long as an id property is set)
+ * @param {string} tag The persistent value to set (works recursively)
+ * @param value The value to set to
+ * @returns Returns the new persistent value object
+**/
+function setPersistent(object, tag, value) {
+	if (!object.id) { return; }
+	return _.set(discord, `persistentValues.${object.constructor.name}.${object.id}.${tag}`, value);
+}
+
+/**
+ * Gets persistent value of an object
+ * 
+ * @param object The object whose persistent value to get (works as long as an id property is set)
+ * @param {string} tag The persistent value to get (works recursively)
+ * @returns Returns the persistent value of the object
+**/
+function getPersistent(object, tag) {
+	if (!object.id) { return; }
+	return _.get(discord, `persistentValues.${object.constructor.name}.${object.id}.${tag}`);
+}
+
+/**
+ * Deletes persistent value of an object
+ * 
+ * @param object The object whose persistent value to delete (works as long as an id property is set)
+ * @param {string} tag The persistent value to delete (works recursively)
+ * @returns Returns true if the persistent value is deleted, else false
+**/
+function deletePersistent(object, tag) {
+	if (!object.id) { return; }
+	return _.unset(discord, `persistentValues.${object.constructor.name}.${object.id}.${tag}`);
+}
 
 /**
  * Color base for simple colours
 **/
 const Color = {
-	Error: '#ff2f2f',
-	Yellow: '#ffff0f',
-	Lime: '#00ff00'
+	RED: '#ff0000',
+	YELLOW: '#ffff00',
+	GREEN: '#00ff00',
+	SKRIPTHUB: {
+		EVENTS: '#a763ff',
+		CONDITIONS: '#ff3d3d',
+		EFFECTS: '#0178ff',
+		EXPRESSIONS: '#0de505',
+		TYPES: '#f39c12',
+		FUNCTIONS: '#b4b4b4'
+	}
 }
 
 /**
@@ -406,7 +498,6 @@ async function getSyntaxList(keyword, type, plugin) {
 		return syntaxList.filter(syntax => {
 			if (!amount[syntax.id]) { amount[syntax.id] = 0; }
 			amount[syntax.id]++;
-			console.log(syntax.name, amount[syntax.id], total, (amount[syntax.id] === total));
 			return (amount[syntax.id] === total);
 		});
 	}
@@ -424,11 +515,14 @@ const isEmpty = (string) => (string === undefined || string === '');
  * Cover a text with a markdown code block
  * 
  * @param {string} string The text to put in the code block
- * @param {string} format The markdown code format for the code block
+ * @param format The markdown code format for the code block (defaults to 'vb')
  * @returns The code block with `string` inside it
 **/
 const getCodeBlock = (string, format = 'vb') => `\`\`\`${format}\n${string}\`\`\``;
 
+/**
+ * Class for easy access to examples and embed
+**/
 class SkriptSyntax {
 	/**
 	 * Get access to SkriptSyntax methods using a syntax object
@@ -462,7 +556,7 @@ class SkriptSyntax {
 	/**
 	 * Get the example of this SkriptSyntax
 	 * 
-	 * @returns {string} The example of this SkriptSyntax
+	 * @returns The example of this SkriptSyntax
 	**/
 	async getExample() {
 		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getExamplesByID&syntax=${this.id}`), console.error);
@@ -482,15 +576,18 @@ class SkriptSyntax {
 		var fields = [
 			{ name: 'Pattern', value: getCodeBlock(this.pattern) }
 		];
-		if (!isEmpty(this.desc)) { fields.push({ name: 'Description', value: this.desc }); }
 		if (!isEmpty(example)) { fields.push({ name: 'Example', value: getCodeBlock(example) }); }
 		fields.push({ name: 'Addon', value: this.addon, inline: true }, { name: 'Requires', value: 'Skript', inline: true });
 
-		return new Discord.MessageEmbed()
-			.setColor(Color.Yellow)
+		var embed = new Discord.MessageEmbed()
+			.setColor(Color.SKRIPTHUB[this.doc.toUpperCase()])
 		    .setTitle(this.name)
 			.setURL(`https://docs.skunity.com/syntax/search/id:${this.id}`)
 			.addFields(fields);
+
+		if (!isEmpty(this.desc)) { embed.description = this.desc; }
+
+		return embed;
 	}
 }
 
@@ -498,6 +595,7 @@ var permissionMessage;
 var guildId;
 var guild;
 var skripter;
+var skripthut;
 var tickets;
 
 var skUnityKey;
@@ -509,6 +607,7 @@ client.on('ready', async () => {
 	guildId = "854838419677904906";
 	guild = client.guilds.cache.get(guildId);
 	skripter = "860242610613911553";
+	skripthut = "https://i.imgur.com/jumFMJ5.png";
 	tickets = "854954327268786227";
 
 	skUnityKey = "58b93076b6269edd";
@@ -586,7 +685,7 @@ client.on('ready', async () => {
 				if (!addon) {
 					reply(interaction, 
 						new Discord.MessageEmbed()
-							.setColor(Color.Error)
+							.setColor(Color.RED)
 							.setTitle('No Addon Found')
 							.setDescription('No addons were found with that search')
 							.setThumbnail(noResults)
@@ -597,24 +696,26 @@ client.on('ready', async () => {
 
 				var files = addon.files;
 				var file = files[files.length - 1];
+
 				var addonInfo = await getAddonInfo(file);
-				
 				if (!addonInfo) { return; }
-			
+
 				var download = addonInfo.download;
 				var depends = addonInfo.depend;
-				var fields = [{ name: 'Addon', value: `**${addonInfo.plugin} ${addonInfo.version}** by **${addonInfo.author.join(", ")}**`, inline: true }];
+				var plugin = `${addonInfo.plugin} ${addonInfo.version}`;
+				var fields = [{ name: 'Addon', value: `**${plugin}.jar** by **${addonInfo.author.join(", ")}**`, inline: true }];
 				if (depends.softdepend) { fields.push({ name: 'Soft Depends', value: depends.softdepend.join(", "), inline: true }); }
 				if (addonInfo.sourcecode) { fields.push({ name: 'Source Code', value: addonInfo.sourcecode, inline: true }); }
 				fields.push({ name: `Download (${formatBytes(parseInt(addonInfo.bytes))})`, value: download });
 
 				var embed = new Discord.MessageEmbed()
-					.setColor(Color.Lime)
-					.setTitle(`${addonInfo.plugin} ${addonInfo.version}`)
+					.setColor(Color.GREEN)
+					.setTitle(plugin)
 					.setURL(download)
-					.setDescription(addonInfo.description || "No description")
 					.addFields(fields)
 					.setFooter(`Powered by SkriptTools`);
+
+				if (addonInfo.description) { embed.description = addonInfo.description; }
 
 				reply(interaction, embed, 0, "EDIT_INITIAL");
 				return;
@@ -631,7 +732,7 @@ client.on('ready', async () => {
 				if (!syntaxList.length) { 
 					reply(interaction, 
 						new Discord.MessageEmbed()
-							.setColor(Color.Error)
+							.setColor(Color.RED)
 							.setTitle('No Results')
 							.setDescription('No results were found for that query')
 							.setThumbnail(noResults)
@@ -1031,7 +1132,6 @@ client.on('ready', async () => {
 
 				var details = await getPunishmentDetails(args.timespan);
 				if (details) {
-					console.log(details);
 					if (!details) {
 						reply(interaction, `That's not a valid timespan (where [x] is any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, convertBitsToBitField(6));
 						break;
@@ -1051,10 +1151,9 @@ client.on('ready', async () => {
 					})
 					.catch(() => {});
 				targetMember.ban({ reason: reason });
-				console.log(now, details.milliseconds);
 				reply(interaction,
 					new Discord.MessageEmbed()
-						.setColor(Color.Error)
+						.setColor(Color.RED)
 						.setAuthor(target.tag, target.avatarURL(), target.avatarURL())
 						.setDescription(`Details for ${target}'s ban from ${guild.name}`)
 						.addFields(
@@ -1075,15 +1174,11 @@ client.on('ready', async () => {
 					break;
 				}
 
-				console.log('hi hi');
 				var target = client.users.cache.get(args.member);
-				console.log('target', target);
 				var targetMember = guild.member(target);
-				console.log('member', targetMember);
 
 				if (args.timespan) {
 					var details = await getPunishmentDetails(args.timespan);
-					console.log(details);
 					if (!details) {
 						reply(interaction, `That's not a valid timespan (let [x] be any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, convertBitsToBitField(6));
 						break;
@@ -1094,12 +1189,10 @@ client.on('ready', async () => {
 
 				var reason = args.reason || "Not kool enough to stay in Skripthut";
 				
-				console.log('member', targetMember);
 				targetMember.ban({ reason: `${reason} (${user.tag})` });
-				console.log(now, details.milliseconds);
 				reply(interaction,
 					new Discord.MessageEmbed()
-						.setColor(Color.Error)
+						.setColor(Color.RED)
 						.setTitle('Ban Details')
 						.setAuthor(target.tag, target.avatarURL(), target.avatarURL())
 						.setDescription(`Details for ${target}'s ban from ${guild.name}`)
@@ -1338,6 +1431,11 @@ client.on('messageReactionAdd', async (reaction, user) => {
 	var channel = message.channel;
 	const guild = message.guild;
 	var member = guild.member(user);
+
+	if (getMetadata(message, 'user') === user.id) {
+		message.delete();
+	}
+
 	const ticket = discord.ticketMessages[message.id];
 	if (ticket) {
 		await message.reactions.resolve("📰").users.remove(user.id);
@@ -1411,7 +1509,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 						embed.description = `${user.tag} created a ticket`;
 						embed.url = `https://discord.com/channels/${guild.id}/${channel.id}/${message.id}`;
 						embed.fields = { name: 'Ticket Description', value: ticket.description };
-						client.channels.cache.get('854847882904731convertBitsToBitField(6)8').send(embed);
+						client.channels.cache.get('854847882904731648').send(embed);
 					});
 				}, 250);
 			});
@@ -1518,7 +1616,7 @@ function convertBitFieldToBits(bitField) {
  *
  * @param {Discord.Interaction} interaction The interaction you want to reply to.
  * @param {(string | Discord.MessageEmbed)} response The message you want to respond with.
- * @param {number} flags The flags of the message (https://discord.com/developers/docs/resources/channel#message-object-message-flags)
+ * @param flags The flags of the message (https://discord.com/developers/docs/resources/channel#message-object-message-flags)
  * 
  * CROSSPOSTED	1 << 0	this message has been published to subscribed channels (via Channel Following)
  * 
@@ -1537,50 +1635,102 @@ function convertBitFieldToBits(bitField) {
  * LOADING	1 << 7	this message is an Interaction Response and the bot is "thinking"
  * 
  * @param {("EDIT_INITIAL" | "DELETE_INTIAL" | "FOLLOW_UP" | "EDIT_SENT" | "SEND")} type The type of Interaction Response.
+ * @param deletable Whether or not the reply should be deletable by the user
 **/
-async function reply(interaction, response, flags, type = "SEND") {	
+async function reply(interaction, response, flags = 0, type = "SEND", deletable = true) {	
 	if (!["EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"].includes(type)) { throw new Error(`${type} is not a valid response type`); }
 
 	var data = (typeof response === 'object') ? await createAPIMessage(interaction, response) : { content: response }
 	data.flags = flags;
 	const followUpData = { data: data };
 
+	const flagsField = convertBitFieldToBits(flags);
+
 	switch(type) { // "EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"
 		case "EDIT_INITIAL":
-			client.api.webhooks(client.user.id, interaction.token).messages("@original").patch(followUpData);
-			return;
+			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages("@original").patch(followUpData);
+			break;
 
 		case "DELETE_INTIAL":
-			client.api.webhooks(client.user.id, interaction.token).messages("@original").delete();
-			return;
+			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages("@original").delete();
+			break;
 
 		case "FOLLOW_UP":
-			client.api.webhooks(client.user.id, interaction.token).post(followUpData);
-			return;
+			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).post(followUpData);
+			break;
 
 		case "EDIT_SENT":
-			client.api.webhooks(client.user.id, interaction.token).messages(interaction.id).patch(followUpData);
-			return;
+			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages(interaction.id).patch(followUpData);
+			break;
 
 		case "SEND":
-			if (convertBitFieldToBits(flags).includes(7)) {
+			if (flagsField.includes(7)) {
 				data = { flags: flags };
+				deletable = false;
 				var responseType = 5;
 			}
 			else {
 				var responseType = 4;
 			}
-			client.api.interactions(interaction.id, interaction.token).callback.post(
+			var responseMessage = await client.api.interactions(interaction.id, interaction.token).callback.post(
 			{
 				data: {
 					type: responseType || 4,
 					data
 				}
 			});
-			return;
+			break;
 
 		default:
 			throw new Error(`${type} is not a valid Interaction Response type`);
+	}
+	if (flagsField.includes(6)) { deletable = false; }
+	if (deletable) {
+		/**
+		 * The ID of the guild of the interaction
+		 * @type {Discord.Snowflake}
+		**/
+		const guild_id = interaction.guild_id;
+		/**
+		 * The guild of the interaction
+		 * @type {Discord.Guild}
+		**/
+		const guild = client.guilds.cache.get(guild_id);
+
+		/**
+		 * The ID of the channel of the interaction
+		 * @type {Discord.Snowflake}
+		**/
+		const channel_id = interaction.channel_id;
+		/**
+		 * The channel of the interaction
+		 * @type {Discord.TextChannel}
+		**/
+		const channel = guild.channels.cache.get(channel_id);
+
+		/**
+		 * The ID of the user who created the interaction
+		 * @type {Discord.Snowflake}
+		**/
+		const user_id = interaction.member.user.id;
+		/**
+		 * The user who created the interaction
+		 * @type {Discord.User}
+		**/
+		const user = client.users.cache.get(user_id);
+
+		/**
+		 * The ID of the response message sent for the
+		**/
+		const message_id = responseMessage.id;
+		/**
+		 * The response message sent for the interaction
+		 * @type {Discord.Message}
+		**/
+		const message = await channel.messages.fetch(message_id);
+
+		await message.react('❌');
+		setMetadata(message, 'user', user.id, 60000);
 	}
 }
 
@@ -1624,8 +1774,16 @@ async function reloadDiscordJSON() {
 		}
 	});
 
-	clearEmpties(discord);
-	writeJSON('./discord/discord.json', discord);
+	/**
+	 * Clears all empties in `discord` and `metadata` objects asynchronously.
+	**/
+	async function clearAllEmpties() {
+		clearEmpties(discord);
+		clearEmpties(metadata);
+	}
+	clearAllEmpties();
+
+	writeJSON('./database/discord.json', discord);
 }
 
 client.login(process.env.TOKEN);

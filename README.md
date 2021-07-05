@@ -1,3 +1,4 @@
+
 # Skripthut Bot
 #### **Application Command Formatting:**
 ```json
@@ -21,3 +22,4 @@ Format the same for nested JSON.
 - Finish /docs Command (add pagination) — HIGH
 - Finish /mute Command - MEDIUM
 - Add /send Command — LOWEST
+- Add metadata for messages, channels, and guilds
