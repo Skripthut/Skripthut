@@ -25,3 +25,4 @@ Formatted all in order. If empty (`[]` or `{}`), delete object.
 - Finish /docs Command (add pagination) — HIGH
 - Finish /mute Command - MEDIUM
 - Add /send Command — LOWEST
+- Replace /createticket Command with /ticket Command (add deletability etc.)
