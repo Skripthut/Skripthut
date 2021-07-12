@@ -1,45 +1,38 @@
-async function reply(interaction, response, flags, type = "SEND") {	
-	if (!["EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"].includes(type)) { throw new Error(`${type} is not a valid response type`); }
+/*
+on script load:
+	set {_hex::*} to "a", "b", "c", "d", "e", "f"
 
-	var data = (typeof response === 'object') ? await createAPIMessage(interaction, response) : { content: response }
-	data.flags = flags;
-	const followUpData = { data: data };
+function componentToHex(component: number) :: number:
+	set {_component} to max(min({_component}, 255), 0)
+	set {_divide} to {_component} / 16
+	set {_1} to floor({_divide})
+	set {_2} to ({_divide} - {_first}) * 16
+	return "%{hex::%({_1} - 9)%} ? {_1}%%{hex::%({_2} - 9)%} ? {_2}%"
 
-	switch(type) { // "EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"
-		case "EDIT_INITIAL":
-			client.api.webhooks(client.user.id, interaction.token).messages("@original").patch(followUpData);
-			return;
-
-		case "DELETE_INTIAL":
-			client.api.webhooks(client.user.id, interaction.token).messages("@original").delete();
-			return;
-
-		case "FOLLOW_UP":
-			client.api.webhooks(client.user.id, interaction.token).post(followUpData);
-			return;
-
-		case "EDIT_SENT":
-			client.api.webhooks(client.user.id, interaction.token).messages(interaction.id).patch(followUpData);
-			return;
-
-		case "SEND":
-			if (convertBitFieldToBits(flags).includes(7)) {
-				data = { flags: flags };
-				var responseType = 5;
-			}
-			else {
-				var responseType = 4;
-			}
-			client.api.interactions(interaction.id, interaction.token).callback.post(
-			{
-				data: {
-					type: responseType || 4,
-					data
-				}
-			});
-			return;
-
-		default:
-			throw new Error(`${type} is not a valid Interaction Response type`);
-	}
+function rgbToHex(r: number, g: number, b: number) :: string:
+	return "#%componentToHex({_r})%%componentToHex({_g})%%componentToHex({_b}%%"
+*/
+var Hex = {
+	1: 'A',
+	2: 'B',
+	3: 'C',
+	4: 'D',
+	5: 'E',
+	6: 'F'
 }
+
+function componentToHex(c = 0) {
+	c = Math.max(Math.min(c, 255), 0);
+	var divide = c / 16;
+	var first = Math.floor(divide);
+	var second = (divide - first) * 16;
+	console.log(divide, first, second, c);
+	return `${Hex[`${first - 9}`] || first}${Hex[`${second - 9}`] || second}`;
+}
+
+function rgbToHex(r, g, b) {
+	return `#${componentToHex(r)}${componentToHex(g)}${componentToHex(b)}`;
+}
+
+console.log(1.5 % 1);
+console.log(rgbToHex(-69, -420, -1000));

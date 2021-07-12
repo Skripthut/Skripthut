@@ -13,54 +13,56 @@ const limit = (number, min, max) => Math.max(Math.min(number, max), min);
  * Format a number of bytes to KiB, MiB, GiB, TiB, etc.
  * 
  * @param {number} bytes The number of bytes to format
- * @param {number} decimals The decimal precision of the formatted string (2 = 0.01, 3 = 0.001)
+ * @param decimals The decimal precision of the formatted string (2 = 0.01, 3 = 0.001)
 **/
 function formatBytes(bytes, decimals = 2) {
-    if (bytes <= 0) { return '0 Bytes'; }
+	if (bytes <= 0) { return '0 Bytes'; }
 
-    const k = 1024;
-    const dm = Math.max(0, decimals);
-    const sizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+	const k = 1024;
+	const dm = Math.max(0, decimals);
+	const sizes = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
 
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+	return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
 /**
  * Sleeps for a certain amount of time (specified in milliseconds)
  * 
- * @param ms The amount of milliseconds to wait before continuing
+ * @param {number} ms The amount of milliseconds to wait before continuing
 **/
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Returns a shuffled copy of this array using Fisher-Yates Shuffle. Please advise from using this with massive arrays, since this can produce lag.
+ * Returns a shuffled copy of the specified array using the Fisher-Yates Shuffle. Please advise from using this with massive arrays, since this can produce lag.
  * 
+ * @param {any[]} array
  * @param {number} [totalElements] The total amount of elements to return (this value is limited to the length of the list -- negative or positive -- and defaults to the length of the list if unspecified)
- * @returns {any[]} Returns a shuffled copy of this array
+ * @returns {any[]} Returns a shuffled copy of `array``
 **/
-Array.prototype.shuffle = function(totalElements) {
-	var length = this.length;
+function shuffle(array, totalElements) {
+	var length = array.length;
 	totalElements = (totalElements === undefined) ? length : limit(totalElements, length * (-1) + 1, length);
-	var array = [ ...this ];
-    for (let i = length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [ array[i], array[j] ] = [ array[j], array[i] ];
-    }
-	return array.slice(0, totalElements);
+	var copy = [ ...array ];
+	for (let i = length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[ copy[i], copy[j] ] = [ copy[j], copy[i] ];
+	}
+	return copy.slice(0, totalElements);
 }
 
-console.log([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ].shuffle());
+console.log(shuffle([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ]));
 
 /**
- * Catches this Promise and runs a callback, and returns this Promise if there are no errors.
+ * Catches the specified Promise and runs a callback, and returns the specified Promise if resolved.
  * 
- * @param {Promise} promise The promise to catch
+ * @template T
+ * @param {Promise<T>} promise The promise to catch.
  * @param {Function} catchCallback The callback to run on catch.
- * @returns This Promise
+ * @returns {Promise<T>} `promise` if resolved, else `void`.
 **/
-async function catchAwait(promise, catchCallback) {
+async function returnCatch(promise, catchCallback) {
 	var caught;
 	await promise.catch(() => { catchCallback(); caught = true; });
 	if (caught) { return; }
@@ -68,7 +70,6 @@ async function catchAwait(promise, catchCallback) {
 }
 
 require(`dotenv`).config({ path: './secrets/client.env/' });
-const htmlEntities = require(`html-entities`);
 const axios = require(`axios`);
 /**
  * @module Discord
@@ -87,7 +88,7 @@ var metadata = {};
  * @param object The object whose metadata to set (works as long as an id property is set)
  * @param {string} tag The metadata tag to set (works recursively)
  * @param value The value to set to
- * @param {number} lifespan The optional lifespan of the metadata (deletes after specified lifespan)
+ * @param {number} [lifespan] The optional lifespan of the metadata (deletes after specified lifespan)
  * @returns Returns the new metadata object
 **/
 function setMetadata(object, tag, value, lifespan) {
@@ -95,9 +96,10 @@ function setMetadata(object, tag, value, lifespan) {
 	tag = `${object.constructor.name}.${object.id}.${tag}`;
 	if (lifespan) {
 		var now = Date.now();
-		metadata[tag] = now;
+		var timeSet = `${tag}::timeSet`;
+		metadata[timeSet] = now;
 		setTimeout(function() {
-			if (metadata[tag] === now) { _.unset(metadata, tag); delete metadata[tag]; }
+			if (metadata[timeSet] === now) { _.unset(metadata, tag); delete metadata[timeSet]; }
 		}, lifespan);
 	}
 	return _.set(metadata, tag, value);
@@ -107,12 +109,12 @@ function setMetadata(object, tag, value, lifespan) {
  * Gets metadata tag of an object
  * 
  * @param object The object whose metadata to get (works as long as an id property is set)
- * @param {string} tag The metadata tag to get (works recursively)
+ * @param {string} [tag] The metadata tag to get (works recursively; returns all metadata if omitted)
  * @returns Returns the metadata tag of the object
 **/
 function getMetadata(object, tag) {
 	if (!object.id) { return; }
-	tag = `${object.constructor.name}.${object.id}.${tag}`;
+	tag = `${object.constructor.name}.${object.id}${tag ? `.${tag}` : ``}`;
 	delete metadata[tag];
 	return _.get(metadata, tag);
 }
@@ -299,43 +301,97 @@ async function deleteCommands(guildId) {
  * @param {boolean} deleteUnset If true, delete all commands that have no identical registered commands.
  * @returns Returns once all commands are registered.
 **/
-async function registerCommands(guildId, ignoreSame = true, deleteUnset = true) {
-	const commands = getApp(guildId).commands;
+async function registerCommands(guildId, ignoreSame = true, fixJSON = true, deleteUnset = true) {
+	console.log('registering');
+	
+	const app = getApp(guildId);
+	const appCommands = app.commands;
 
-	var awaitCommands = {};
-	if (ignoreSame) {
-		awaitCommands = await commands.get();
-	}
-
-	var unset = {};
-	if (deleteUnset) {
-		for (const awaitCommand of awaitCommands) {
-			unset[awaitCommand.id] = true;
+	if (ignoreSame || fixJSON || deleteUnset) {
+		var appCommandsArray = await appCommands.get();
+		
+		var registeredCommands = {};
+		for (const appCommand of appCommandsArray) {
+			const id = appCommand.id;
+			[ 'id', 'application_id', 'version', 'guild_id', 'default_permission' ].forEach((key) => delete appCommand[key]);
+			registeredCommands[id] = appCommand;
 		}
-	}
-
-	commandLoop: for (const command of discord.commands) {
-		for (const awaitCommand of awaitCommands) {
-			var id = awaitCommand.id;
-			[ 'id', 'application_id', 'version', 'guild_id', 'default_permission' ].forEach((key) => delete awaitCommand[key]);
-			if (JSON.stringify(command) === JSON.stringify(awaitCommand)) {
-				delete unset[id];
-				continue commandLoop;
+		
+		if (Object.keys(registeredCommands)) {
+			var entries = Object.entries(registeredCommands).filter(() => true);
+			var isCommandSet = function(command) {
+				for (var i = entries.length - 1; i > -1; i--) {
+			   		const entry = entries[i];
+					if (JSON.stringify(command) === JSON.stringify(entry[1])) {
+						entries.splice(i, 1);
+						return true;
+					}
+				}
+				return; 
 			}
 		}
+	}
+
+	var commands = [];
+	var commandNames = [];
+	var localCommands = fs.readdir('./commands');
+	await localCommands.then(async (localCommands) => {
+		for (const command of localCommands) {
+			const commandData = loadJSON(`./commands/${command}`);
+			commands = [ ...commands, commandData ];
+			commandNames = [ ...commandNames, commandData.name ];
+		}
+	});
+	
+	for (const command of commands) {
+		if (isCommandSet) {
+			const result = isCommandSet(command);
+			if (result) { continue; }
+		}
+
 		console.log(`register ${command.name}`);
-		await commands.post({
+		await appCommands.post({
 			data: command
 		});
 		discord.totalRegisteredCommands++;
 	}
-	/*if (deleteUnset) {
-		for (const unsetCommand in unset) {
-			var deleteCommand = getApp(guildId).commands(unsetCommand);
-			console.log(`unset delete ${deleteCommand.name}`, deleteCommand, ''+deleteCommand);
-			await deleteCommand.delete();
+	
+	if ((fixJSON || deleteUnset) && entries.length) {
+		let newAppCommandsArray = await appCommands.get();
+		if (deleteUnset) {
+			for (let i = newAppCommandsArray.length - 1; i > -1; i--) {
+				const command = newAppCommandsArray[i];
+				const name = command.name;
+				if (!commandNames.includes(name)) {
+					console.log(`delete unset ${name}`);
+					getApp(guildId).commands(command.id).delete();
+					newAppCommandsArray.splice(i, 1);
+				}
+			}
 		}
-	}*/
+		
+		if (fixJSON) {
+			let newAppCommandsDataArray = JSON.parse(JSON.stringify(newAppCommandsArray));
+			for (const newCommand of newAppCommandsDataArray) {
+				[ 'id', 'application_id', 'version', 'guild_id', 'default_permission' ].forEach((key) => delete newCommand[key]);
+			}
+			
+			async function fixCommandJSON(name) {
+				for (const newCommand of newAppCommandsDataArray) {
+					if (newCommand.name === name) {
+						console.log(`Fix ./commands/${name}.json`);
+						fs.writeFile(`./commands/${name}.json`, JSON.stringify(newCommand, null, 4), console.error);
+						return;
+					}
+				}
+			}
+			
+			for (const [ key, value ] of entries) {
+				var name = value.name;
+				fixCommandJSON(name);
+			}
+		}
+	}
 	return true;
 }
 
@@ -358,6 +414,8 @@ for (const key of Object.keys(millis)) {
  * 
  * @param {string} string The formatted string to parse
  * @returns Returns millis from formatted string
+ * @example
+ * var oneYearTwoDaysThreeSeconds = getMillisFromString('2d1y3s');
 **/
 async function getMillisFromString(string) {
 	if (!string) { return NaN; }
@@ -404,7 +462,7 @@ async function getPunishmentDetails(millisTimespan) {
  * @param {string} addon The JAR file of the addon
  * @returns 
  * {{
- * author: [],
+ * author: string[],
  * description: string,
  * plugin: string,
  * version: string,
@@ -419,7 +477,7 @@ async function getPunishmentDetails(millisTimespan) {
  * }} The info of the addon
 **/
 async function getAddonInfo(addon) {
-	const response = await catchAwait(axios.get(`https://api.skripttools.net/v4/addons/${addon}/`), (error) => {
+	const response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons/${addon}/`), (error) => {
 		console.error(error);
 		reply(interaction, `Error: Unable to get addon info (<https://api.skripttools.net/v4/addons/${addon}/>)`);
 	});
@@ -434,7 +492,7 @@ async function getAddonInfo(addon) {
  * @returns 
 **/
 async function getAddon(name) {
-	var response = await catchAwait(axios.get(`https://api.skripttools.net/v4/addons`), (error) => {
+	var response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons`), (error) => {
 		console.error(error);
 		reply(interaction, `Error: Unable to get addon list (https://api.skripttools.net/v4/addons/)`);
 	});
@@ -448,60 +506,19 @@ async function getAddon(name) {
 }
 
 /**
- * Get syntax using a key word, plus an optional type and plugin
+ * Get all syntax matching a search query
  * 
- * @param {string} keyword The key word to search
- * @param {string} [type] The doc type to search (event, expression, effect, condition, or type)
- * @param {string} [plugin] The plugin to search (i.e. Skript, SkBee, TuSKe)
- * @returns {Promise<any[]>} All syntaxes that match `keyword` (ID or partial name)
+ * @param {string} query The search query (i.e. `kill from:skript type:effect`)
+ * @returns {{id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}
 **/
-async function getSyntaxList(keyword, type, plugin) {
-	if (!type && !plugin) {
-		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getAllSyntax`), (error) => {
-			console.error(error);
-			reply(interaction, `Error: Unable to get all syntax (https://docs.skunity.com/api/?key=${skUnityKey}&function=getAllSyntax/)`);
-		});
-		if (!response) { return; }
+async function searchForSyntax(query) {
+	var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=doSearch&query=${query}`));
+	if (!response) { return; }
 
-		return response.data.result.filter(syntax => syntax.id === keyword || syntax.name.toLowerCase().includes(keyword));
-	}
+	/** @type {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}}} **/
+	var data = response.data;
 
-	var syntaxList = [];
-	var total = 0;
-	if (type) {
-		total++;
-		console.log('type', type, total);
-		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getDocTypeSyntax&doctype=${type}`), (error) => {
-			console.error(error);
-			reply(interaction, `Error: Unable to get doc type syntax (https://docs.skunity.com/api/?key=${skUnityKey}&function=getDocTypeSyntax&doctype=${type}/)`);
-		});
-		if (!response) { return syntaxList; }
-
-		syntaxList = response.data.result.filter(syntax => syntax.id === keyword || syntax.name.toLowerCase().includes(keyword));
-	}
-	if (plugin) {
-		total++;
-		console.log('plugin', plugin, total);
-		var addon = plugin !== 'skript' ? (await getAddon(plugin)).name : plugin;
-		console.log('addon', addon, total);
-		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getAddonSyntax&addon=${addon}`), (error) => {
-			console.error(error);
-			reply(interaction, `Error: Unable to get doc type syntax (https://docs.skunity.com/api/?key=${skUnityKey}&function=getAddonSyntax&addon=${addon}/)`);
-		});
-		if (!response) { return syntaxList; }
-
-		syntaxList.push(...response.data.result.filter(syntax => syntax.id === keyword || syntax.name.toLowerCase().includes(keyword)));
-	}
-
-	if (total > 1) {
-		var amount = {};
-		return syntaxList.filter(syntax => {
-			if (!amount[syntax.id]) { amount[syntax.id] = 0; }
-			amount[syntax.id]++;
-			return (amount[syntax.id] === total);
-		});
-	}
-	return syntaxList;
+	return data.result.records;
 }
 
 /**
@@ -524,6 +541,8 @@ const getCodeBlock = (string, format = 'vb') => `\`\`\`${format}\n${string}\`\`\
  * Class for easy access to examples and embed
 **/
 class SkriptSyntax {
+	// {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {stuff}[]}}}
+
 	/**
 	 * Get access to SkriptSyntax methods using a syntax object
 	 * 
@@ -543,33 +562,56 @@ class SkriptSyntax {
 	 * is_array: ('0' | '1'),
 	 * tags: string,
 	 * reviewed: ('true' | 'false'),
-	 * versions: string
+	 * versions: string,
+	 * examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[],
+	 * info: {status: string},
+	 * perc: number
 	 * }} syntax The syntax object to convert to a SkriptSyntax object
 	 * @returns The new SkriptSyntax object
 	**/
 	constructor(syntax) {
-		for (var key in syntax) {
-			this[key] = syntax[key];
-		}
+		/** The skUnity Docs id of this syntax **/
+		this.id = syntax.id;
+		/** The name of this syntax **/
+		this.name = syntax.name;
+		/** The doc type of this syntax **/
+		this.doc = syntax.doc;
+		/** The description of this syntax **/
+		this.desc = syntax.desc;
+		/** The addon of this syntax **/
+		this.addon = syntax.addon;
+		/** The version this syntax originates from **/
+		this.version = syntax.version;
+		/** The pattern(s) of this syntax, with a new line delimiter **/
+		this.pattern = syntax.pattern;
+		/** The required plugin(s) for this syntax **/
+		this.plugin = syntax.plugin;
+		/** The event values of this syntax **/
+		this.eventvalues = syntax.eventvalues;
+		/** The changers of this syntax (add, remove, set, etc.) **/
+		this.changers = syntax.changers;
+		/** The type this syntax returns **/
+		this.returntype = syntax.returntype;
+		/** Whether or not this syntax is plural **/
+		this.is_array = syntax.is_array;
+		/** The tags of this syntax  **/
+		this.tags = syntax.tags;
+		/** Whether or not this syntax is reviewed **/
+		this.reviewed = syntax.reviewed;
+		/** Idk **/
+		this.versions = syntax.versions;
+		/** The examples of this syntax **/
+		this.examples = syntax.examples;
+		/** Some extra info **/
+		this.info = syntax.info;
+		/** No idea **/
+		this.perc = syntax.perc;
 	}
-
+	
 	/**
-	 * Get the example of this SkriptSyntax
+	 * Get a formatted embed using this SkriptSyntax's properties
 	 * 
-	 * @returns The example of this SkriptSyntax
-	**/
-	async getExample() {
-		var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getExamplesByID&syntax=${this.id}`), console.error);
-		if (!response) { return; }
-		if (!response.data.result[0]) { return; }
-
-		return htmlEntities.decode(response.data.result[0].example);
-	}
-
-	/**
-	 * Get a formatted embed using this SkriptSyntax properties
-	 * 
-	 * @param {string} [example] The example of this syntax (use this.getExample() method)
+	 * @param {string} [example] The example of this syntax (preferably this.examples[0])
 	 * @returns A formatted embed using this SkriptSyntax
 	**/
 	getEmbed(example) {
@@ -581,7 +623,7 @@ class SkriptSyntax {
 
 		var embed = new Discord.MessageEmbed()
 			.setColor(Color.SKRIPTHUB[this.doc.toUpperCase()])
-		    .setTitle(this.name)
+			.setTitle(this.name)
 			.setURL(`https://docs.skunity.com/syntax/search/id:${this.id}`)
 			.addFields(fields);
 
@@ -613,7 +655,7 @@ client.on('ready', async () => {
 	skUnityKey = "58b93076b6269edd";
 	noResults = "https://i.imgur.com/AjlWaz5.png";
 
-	await registerCommands(guildId);
+	await registerCommands(guildId).catch(console.error);
 
 	client.ws.on('INTERACTION_CREATE', async (interaction) => { // WebSocket Interaction Create Event (for slash commands)
 		/** @type {{name: string, options: any}} */
@@ -724,11 +766,9 @@ client.on('ready', async () => {
 			// DOCS COMMAND
 			case 'docs':
 				reply(interaction, "Getting syntax...", convertBitsToBitField(7));
-				var keyword = args.keyword.toLowerCase();
-				if (args.type) { var type = args.type.toLowerCase(); };
-				if (args.from) { var plugin = args.from.toLowerCase(); }
+				var query = args.query;
 
-				var syntaxList = await getSyntaxList(keyword, type, plugin);
+				var syntaxList = await searchForSyntax(query);
 				if (!syntaxList.length) { 
 					reply(interaction, 
 						new Discord.MessageEmbed()
@@ -881,16 +921,46 @@ client.on('ready', async () => {
 				var option = options[0];
 				var type = option.name;
 
+				/** @type {Discord.MessageReaction} **/
+				var reactionRoleEmote;
+				/** @type {Discord.Snowflake} **/
+				var reactionRoleEmoteId;
+
+				/** @type {Discord.TextChannel} **/
+				var reactionRoleChannel;
+				/** @type {Discord.Snowflake} **/
+				var reactionRoleChannelId;
+
+				/** @type {Discord.Message} **/
+				var reactionRoleMessage;
+				/** @type {Discord.Snowflake} **/
+				var reactionRoleMessageId;
+
+				/** @type {Discord.Role} **/
+				var reactionRole;
+				/** @type {Discord.Snowflake} **/
+				var reactionRoleId;
+
+				/** @type {[string, ReactionRoleEmote][]} **/
+				var emotes;
+				/**
+				 * _reactionRoleMessage.emotes is spread, but JSDoc doesn't have support for that currently, so...
+				 * @type {{id: string, emotes: {string: ReactionRoleEmote}[]}}
+				**/
+				var _reactionRoleMessage;
+				/** @type {string} **/
+				var chosenEmote;
+
 				if (type === 'create') {
-					var chosenEmote = (option.options[2] || { value: '📰' }).value;
+					chosenEmote = (option.options[2] || { value: '📰' }).value;
 
 					if (chosenEmote.match(/\p{Extended_Pictographic}/u)) {
-						var reactionRoleEmote = chosenEmote;
-						var reactionRoleEmoteId = chosenEmote;
+						reactionRoleEmote = chosenEmote;
+						reactionRoleEmoteId = chosenEmote;
 					}
 					else {
-						var reactionRoleEmote = client.emojis.cache.find((emote) => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: '' };
-						var reactionRoleEmoteId = reactionRoleEmote.id;
+						reactionRoleEmote = client.emojis.cache.find((emote) => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: '' };
+						reactionRoleEmoteId = reactionRoleEmote.id;
 					}
 
 					if (!reactionRoleEmoteId) {
@@ -898,14 +968,14 @@ client.on('ready', async () => {
 						break;
 					}
 
-					var reactionRoleChannel = guild.channels.cache.get(option.options[0].value);
-					var reactionRoleMessage = option.options[1].value.replace(/%(n(?:ew)?l(?:ine)?|line ?break)%/g, "\n");
-					var reactionRole = option.options[3].value;
+					reactionRoleChannel = guild.channels.cache.get(option.options[0].value);
+					reactionRoleMessageContent = option.options[1].value.replace(/%(n(?:ew)?l(?:ine)?|line ?break)%/g, "\n");
+					reactionRole = option.options[3].value;
 
-					var sentMessage = reactionRoleChannel.send(reactionRoleMessage);
+					let reactionRoleMessage = reactionRoleChannel.send(reactionRoleMessageContent);
 					await reply(interaction, 'Sending...', convertBitsToBitField(6));
 
-					sentMessage.then(async (message) => {
+					reactionRoleMessasge.then(async (message) => {
 						await message.react(reactionRoleEmote);
 						discord.reactionRoleMessages[message.id] = {
 							id: message.id,
@@ -917,33 +987,33 @@ client.on('ready', async () => {
 				}
 
 				if (type === 'add') {
-					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
+					let ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
 
 					if (ids[1] !== guild_id) {
 						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
-					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
+					reactionRoleChannel = guild.channels.cache.get(ids[2]);
 					if (!reactionRoleChannel) {
 						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
-					var reactionRoleMessageId = ids[3];
-					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
+					reactionRoleMessageId = ids[3];
+					reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
 					if (!reactionRoleMessage) {
 						reply(interaction, `That's not a valid message URL (message ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
 
-					var chosenEmote = (option.options[1] || { value: '📰' }).value;
+					chosenEmote = (option.options[1] || { value: '📰' }).value;
 
 					if (chosenEmote.match(/\p{Extended_Pictographic}/u)) {
-						var reactionRoleEmote = chosenEmote;
-						var reactionRoleEmoteId = chosenEmote;
+						reactionRoleEmote = chosenEmote;
+						reactionRoleEmoteId = chosenEmote;
 					}
 					else {
-						var reactionRoleEmote = client.emojis.cache.find((emote) => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: null };
-						var reactionRoleEmoteId = reactionRoleEmote.id;
+						reactionRoleEmote = client.emojis.cache.find((emote) => emote.name.toLowerCase() === chosenEmote || emote.id === chosenEmote) || { id: null };
+						reactionRoleEmoteId = reactionRoleEmote.id;
 					}
 
 					if (!reactionRoleEmoteId) {
@@ -951,9 +1021,9 @@ client.on('ready', async () => {
 						break;
 					}
 
-					var reactionRole = option.options[2].value;
+					reactionRole = option.options[2].value;
 
-					const _reactionRoleMessage = _.get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
+					_reactionRoleMessage = _.get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
 					if (_reactionRoleMessage) {
 						const emotes = _reactionRoleMessage.emotes;
 						if (emotes[reactionRoleEmoteId]) {
@@ -986,50 +1056,63 @@ client.on('ready', async () => {
 						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
-					var reactionRoleChannel = guild.channels.cache.get(ids[2]);
+					reactionRoleChannel = guild.channels.cache.get(ids[2]);
+
 					if (!reactionRoleChannel) {
 						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
-					var reactionRoleMessageId = ids[3];
-					var reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
+					reactionRoleMessageId = ids[3];
+					reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
 					if (!reactionRoleMessage) {
 						reply(interaction, `That's not a valid message URL (message ID invalid)!`, convertBitsToBitField(6));
 						break;
 					}
 
-					var _reactionRoleMessage = _.get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
+					_reactionRoleMessage = _.get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
 
 					if (!_reactionRoleMessage) {
 						reply(interaction, `This message doesn't have any reaction roles!`, convertBitsToBitField(6));
 						break;
 					}
 
-					var reactionRoleId = option.options[1].value;
+					reactionRoleId = option.options[1].value;
 
-					const emotes = _reactionRoleMessage.emotes;
-					const keys = Object.keys(emotes);
-					for (var i = 0; i < keys.length; i++) {
-						const key = keys[i];
-						if (emotes[key].role === reactionRoleId) {
-							var reactionRoleEmote = key;
-							delete discord.reactionRoleMessages[reactionRoleMessageId].emotes[key];
+					emotes = _reactionRoleMessage.emotes;
+
+					/**
+					 * Remove all emotes from a reaction role message
+					 * 
+					 * @param {ReactionRoleEmote[]} emotes The emotes of the reaction role message
+					 * @returns The id of the removed emote, and the new length of the emotes of the reaction role message
+					**/
+					function removeEmotes(emotes) {
+						const entries = Object.entries(emotes);
+						for (var [key, value] of entries) {
+							if (value.role === reactionRoleId) {
+								delete discord.reactionRoleMessages[reactionRoleMessageId].emotes[key];
+								return { id: key, length: entries.length - 1 };
+							}
 						}
-					}
+					}					
 
-					if (!Object.keys(discord.reactionRoleMessages[reactionRoleMessageId].emotes).length) {
-						delete discord.reactionRoleMessages[reactionRoleMessageId];
-					}
+					var removeEmotesResult = removeEmotes(emotes);
 
-					if (!reactionRoleEmote) {
+					if (!removeEmotesResult) {
 						reply(interaction, `This message doesn't have that role!`, convertBitsToBitField(6));
 						break;
 					}
 
+					if (!removeEmotesResult.length) {
+						delete discord.reactionRoleMessages[reactionRoleMessageId];
+					}
+
+					var reactionRoleEmoteId = removeEmotesResult.id;
+
 					var reactionRole = guild.roles.cache.get(reactionRoleId);
 
 					reply(interaction, `Removing ${reactionRole} from the specified message...`, convertBitsToBitField(6));
-					reactionRoleMessage.reactions.resolve(reactionRoleEmote).remove();
+					reactionRoleMessage.reactions.resolve(reactionRoleEmoteId).remove();
 					break;
 				}
 				reply(interaction, 'bruh moment', convertBitsToBitField(6));
@@ -1037,6 +1120,8 @@ client.on('ready', async () => {
 
 			// COLOURROLE COMMAND
 			case 'colourrole':
+				reply(interaction, 'nuu', convertBitsToBitField(6));
+				break;
 				var roles = member.roles.cache;
 				var hasRoles =
 				(
@@ -1121,7 +1206,7 @@ client.on('ready', async () => {
 					break;
 				}
 
-				var targetMember = await catchAwait(guild.members.fetch(args.member), () => {
+				var targetMember = await returnCatch(guild.members.fetch(args.member), () => {
 					reply(interaction, `That's not a valid member!`, convertBitsToBitField(6));
 				});
 				if (!targetMember) {
@@ -1257,7 +1342,7 @@ client.on('ready', async () => {
 				reply(interaction, 'hello', convertBitsToBitField(4, 7));
 				setTimeout(function() {
 					reply(interaction, ':O', convertBitsToBitField(4), "EDIT_INITIAL");
-				}, 10000);
+				}, 5000);
 				break;
 
 			default:
@@ -1302,12 +1387,19 @@ client.on('message', (message) => {
 			deleteCommands(guild.id);
 		}
 		else if (lower.includes('!eval')) {
-			eval(message.content.substr(6, lower.length));
+			try {
+				eval(message.content.substr(6, lower.length)); 
+			} 
+			catch (error) {
+				if (error instanceof SyntaxError) { console.error(error.message); } 
+				else { throw error; }
+			}
 		}
 	}
 });
 
 client.on('messageUpdate', async (oldMessage, newMessage) => {
+	/** @type {Discord.User} **/
 	var user = newMessage.author;
 	if (user.bot) { return; }
 	var oldContent = oldMessage.content;
@@ -1366,15 +1458,14 @@ client.on('guildMemberAdd', async (member) => {
 	const guild = member.guild;
 	const user = member.user;
 	client.channels.cache.get('854842141498277908').send(
-		(_.get(discord, `guilds.${guild.id}.joinMessages`) || [
+		shuffle(_.get(discord, `guilds.${guild.id}.joinMessages`) || [
 			"\\:O It's ${user}, thanks for joining!",
 			"Welp, here's ${user}...",
 			"Well then, ${user}'s here...",
 			"Whoa, whoa, whoa, when did ${user} get here?",
 			"Ah shoot, here comes ${user}...",
 			"And then came ${user}!"
-    	])
-			.shuffle(1)[0]
+		], 1)[0]
 			.replace('${user}', user.toString()) // Replace ${user} with the user's tag (username#discriminator)
 			.replace('${user.tag}', user.tag) // Replace ${user.mention} with the user's mention
 			.replace('${guild}', guild.name) // Replace ${guild} with the guild name
@@ -1415,15 +1506,12 @@ if (discord.lastActivation !== now) {
 discord.lastActivation = now;
 discord.activations++;
 
-//var logs = fs.createWriteStream(`./logs/${now}**${discord.activations}`);
-//logs.write('hi');
-
-//var access = fs.createWriteStream(`./logs/${now}**${discord.activations}`);
-//process.stdout.write = process.stderr.write = access.write.bind(access);
+/*var access = fs.createWriteStream(`./logs/${now}**${discord.activations}`);
+process.stdout.write = process.stderr.write = access.write.bind(access);
 
 process.on('uncaughtException', function(err) {
   console.error((err && err.stack) ? err.stack : err);
-});
+});*/
 
 client.on('messageReactionAdd', async (reaction, user) => {
 	if (user.bot) { return; }
@@ -1614,7 +1702,7 @@ function convertBitFieldToBits(bitField) {
 /**
  * Reply to a Discord interaction.
  *
- * @param {Discord.Interaction} interaction The interaction you want to reply to.
+ * @param {Object} interaction The interaction you want to reply to.
  * @param {(string | Discord.MessageEmbed)} response The message you want to respond with.
  * @param flags The flags of the message (https://discord.com/developers/docs/resources/channel#message-object-message-flags)
  * 
@@ -1642,13 +1730,13 @@ async function reply(interaction, response, flags = 0, type = "SEND", deletable 
 
 	var data = (typeof response === 'object') ? await createAPIMessage(interaction, response) : { content: response }
 	data.flags = flags;
-	const followUpData = { data: data };
+	const responseData = { data: data };
 
 	const flagsField = convertBitFieldToBits(flags);
 
 	switch(type) { // "EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"
 		case "EDIT_INITIAL":
-			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages("@original").patch(followUpData);
+			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages("@original").patch(responseData);
 			break;
 
 		case "DELETE_INTIAL":
@@ -1656,11 +1744,11 @@ async function reply(interaction, response, flags = 0, type = "SEND", deletable 
 			break;
 
 		case "FOLLOW_UP":
-			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).post(followUpData);
+			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).post(responseData);
 			break;
 
 		case "EDIT_SENT":
-			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages(interaction.id).patch(followUpData);
+			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages(interaction.id).patch(responseData);
 			break;
 
 		case "SEND":
@@ -1675,7 +1763,7 @@ async function reply(interaction, response, flags = 0, type = "SEND", deletable 
 			var responseMessage = await client.api.interactions(interaction.id, interaction.token).callback.post(
 			{
 				data: {
-					type: responseType || 4,
+					type: responseType,
 					data
 				}
 			});
@@ -1684,8 +1772,9 @@ async function reply(interaction, response, flags = 0, type = "SEND", deletable 
 		default:
 			throw new Error(`${type} is not a valid Interaction Response type`);
 	}
-	if (flagsField.includes(6)) { deletable = false; }
+	if (flagsField.includes(6) || type === "SEND") { deletable = false; }
 	if (deletable) {
+		console.log(flagsField);
 		/**
 		 * The ID of the guild of the interaction
 		 * @type {Discord.Snowflake}
@@ -1721,19 +1810,28 @@ async function reply(interaction, response, flags = 0, type = "SEND", deletable 
 
 		/**
 		 * The ID of the response message sent for the
+		 * @type {Discord.Snowflake}
 		**/
 		const message_id = responseMessage.id;
 		/**
 		 * The response message sent for the interaction
-		 * @type {Discord.Message}
 		**/
-		const message = await channel.messages.fetch(message_id);
+		const message = await channel.messages.fetch(message_id, true, true);
+
+		console.log('message', responseMessage, message_id);
 
 		await message.react('❌');
-		setMetadata(message, 'user', user.id, 60000);
+		
+		setMetadata(message, 'user', user.id, 3600000);
 	}
 }
 
+/**
+ * Create an API message for the specified interaction with the specified content
+ * 
+ * @param interaction The desired interaction for the API message
+ * @param {(string | Discord.MessageEmbed) | (string | Discord.MessageEmbed)[]} content The content of the message
+**/
 async function createAPIMessage(interaction, content) {
 	const { data, files } = await Discord.APIMessage.create(
 		client.channels.resolve(interaction.channel_id),
@@ -1774,14 +1872,13 @@ async function reloadDiscordJSON() {
 		}
 	});
 
-	/**
+	(/**
 	 * Clears all empties in `discord` and `metadata` objects asynchronously.
 	**/
-	async function clearAllEmpties() {
+	async function() {
 		clearEmpties(discord);
 		clearEmpties(metadata);
-	}
-	clearAllEmpties();
+	})();
 
 	writeJSON('./database/discord.json', discord);
 }
