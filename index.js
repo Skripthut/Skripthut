@@ -487,16 +487,23 @@ async function getAddonInfo(addon) {
  * Get addon info from a partial name
  * 
  * @param {string} name The partial name to search for
- * @returns The name and download files of the first matched addon
+ * @param api The desired api to use for searching (skripttools or skripthub)
+ * @returns A few details of the first matched addon
 **/
-async function getAddon(name) {
+async function getAddon(name, api = 'skripttools') {
 	name = name.toLowerCase();
-	var response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons`), console.error);
-	if (!response) { return; }
+	if (api === 'skripttools') {
+		var response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons`), console.error);
+		if (!response) { return; }
 
-	var data = response.data.data;
-	for (const addon in data) {
-		if (addon.toLowerCase().includes(name)) { return { name: addon, files: data[addon]}; }
+		var data = response.data.data;
+		for (const addon in data) {
+			if (addon.toLowerCase().includes(name)) { return { name: addon, files: data[addon]}; }
+		}
+	}
+
+	else if (api === 'skripthub') {
+
 	}
 	return;
 }
@@ -505,16 +512,27 @@ async function getAddon(name) {
  * Get all syntax matching a search query
  * 
  * @param {string} query The search query (i.e. `kill from:skript type:effect`)
- * @returns {{id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}
 **/
-async function searchForSyntax(query) {
-	var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityAPIKey}&function=doSearch&query=${query}`));
-	if (!response) { return; }
+async function searchForSyntax(query, api = 'skunity') {
+	if (api === 'skunity') {
+		var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityAPIKey}&function=doSearch&query=${query}`));
+		if (!response) { return { api: api, result: [] }; }
 
-	/** @type {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}}} **/
-	var data = response.data;
+		/** @type {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}}} **/
+		var data = response.data;
 
-	return data.result.records;
+		return { api: api, result: data.result.records };
+	}
+
+	else if (api === 'skripthub') {
+		var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityAPIKey}&function=doSearch&query=${query}`));
+		if (!response) { return { api: api, result: [] }; }
+
+		/** @type {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}}} **/
+		var data = response.data;
+
+		return { api: api, result: '' };
+	}
 }
 
 /**
@@ -534,14 +552,12 @@ const isEmpty = (string) => (string === undefined || string === '');
 const getCodeBlock = (string, format = 'vb') => `\`\`\`${format}\n${string}\`\`\``;
 
 /**
- * Class for easy access to examples and embed
+ * Class for easy access to examples and embed using skUnity syntax
 **/
 class SkriptSyntax {
 	// {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {stuff}[]}}}
 
-	/**
-	 * Get access to SkriptSyntax methods using a syntax object
-	 * 
+    /** 
 	 * @param
 	 * {{
 	 * id: string,
@@ -563,58 +579,75 @@ class SkriptSyntax {
 	 * info: {status: string},
 	 * perc: number
 	 * }} syntax The syntax object to convert to a SkriptSyntax object
+	**/
+
+	/**
+	 * Get access to SkriptSyntax methods using a skUnity syntax object
+	 * 
+	 * @param syntax The syntax object to convert to a SkriptSyntax object
+	 * @param api The api the syntax originates from (skunity or skripthub)
 	 * @returns The new SkriptSyntax object
 	**/
-	constructor(syntax) {
-		/** The skUnity Docs id of this syntax **/
+	constructor(syntax, api = 'skunity') {
+		/** @type {(string | number)} The doc id of this syntax **/
 		this.id = syntax.id;
-		/** The name of this syntax **/
-		this.name = syntax.name;
-		/** The doc type of this syntax **/
+		/** @type {string} The name of this syntax **/
+		this.name = syntax.name || syntax.title;
+		/** @type {('events' | 'expressions' | 'effects' | 'conditions' | 'types' | 'functions')} The doc type of this syntax **/
 		this.doc = syntax.doc;
-		/** The description of this syntax **/
+		/** @type {string} The description of this syntax **/
 		this.desc = syntax.desc;
-		/** The addon of this syntax **/
+		/** @type {string} The addon of this syntax **/
 		this.addon = syntax.addon;
-		/** The version this syntax originates from **/
+		/** @type {string} The version this syntax originates from **/
 		this.version = syntax.version;
-		/** The pattern(s) of this syntax, with a new line delimiter **/
+		/** @type {string} The pattern(s) of this syntax, with a new line delimiter **/
 		this.pattern = syntax.pattern;
-		/** The required plugin(s) for this syntax **/
+		/** @type {string} The required plugin(s) for this syntax **/
 		this.plugin = syntax.plugin;
-		/** The event values of this syntax **/
+		/** @type {string} The event values of this syntax **/
 		this.eventvalues = syntax.eventvalues;
-		/** The changers of this syntax (add, remove, set, etc.) **/
+		/** @type {string} The changers of this syntax (add, remove, set, etc.) **/
 		this.changers = syntax.changers;
-		/** The type this syntax returns **/
+		/** @type {string} The type this syntax returns **/
 		this.returntype = syntax.returntype;
-		/** Whether or not this syntax is plural **/
+		/** @type {('0' | '1')} Whether or not this syntax is plural **/
 		this.is_array = syntax.is_array;
-		/** The tags of this syntax  **/
-		this.tags = syntax.tags;
-		/** Whether or not this syntax is reviewed **/
-		this.reviewed = syntax.reviewed;
-		/** Idk **/
-		this.versions = syntax.versions;
-		/** The examples of this syntax **/
+		/** @type {string} The examples of this syntax **/
 		this.examples = syntax.examples;
-		/** Some extra info **/
-		this.info = syntax.info;
-		/** No idea **/
-		this.perc = syntax.perc;
+		/** @type {string} The API this syntax is from **/
+		this.api = api;
+	}
+
+	/**
+	 * Get the example of this SkriptSyntax
+	 * 
+	 * @returns The example of this SkriptSyntax
+	**/
+	async getExample() {
+		if (this.api === 'skunity') {
+			var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getExamplesByID&syntax=${this.id}`), console.error);
+			if (!response) { return; }
+			if (!response.data.result[0]) { return; }
+
+			return htmlEntities.decode(response.data.result[0].example);
+		}
+		if (this.api === 'skripthub') {
+
+		}
 	}
 	
 	/**
 	 * Get a formatted embed using this SkriptSyntax's properties
 	 * 
-	 * @param {string} [example] The example of this syntax (preferably this.examples[0])
+	 * @param {string} [example] The desired visible example of this syntax
 	 * @returns A formatted embed using this SkriptSyntax
 	**/
 	getEmbed(example) {
 		var fields = [
 			{ name: 'Pattern', value: getCodeBlock(this.pattern) }
 		];
-		if (!isEmpty(example)) { fields.push({ name: 'Example', value: getCodeBlock(htmlEntities.decode(example)) }); }
+		if (!isEmpty(example)) { fields.push({ name: 'Example', value: getCodeBlock(example) }); }
 		fields.push({ name: 'Addon', value: this.addon, inline: true }, { name: 'Requires', value: 'Skript', inline: true });
 
 		var embed = new Discord.MessageEmbed()
@@ -639,6 +672,7 @@ var tickets;
 var skUnityAPIKey;
 var skriptHubAPIVersion;
 var skriptHubAPIKey;
+var skriptHubAPIAuthorization;
 var noResults;
 client.on('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`);
@@ -653,6 +687,11 @@ client.on('ready', async () => {
 	skUnityAPIKey = "58b93076b6269edd";
 	skriptHubAPIVersion = "v1";
 	skriptHubAPIKey = "019e6835c735556d3c42492ed59493e84d197a97";
+	skriptHubAPIAuthorization = {
+		headers: {
+			Authorization: `Token ${skriptHubAPIKey}` 
+		}
+	};
 	noResults = "https://i.imgur.com/AjlWaz5.png";
 
 	await registerCommands(guildId).catch(console.error);
@@ -786,7 +825,7 @@ client.on('ready', async () => {
 
 				var syntax = new SkriptSyntax(syntaxList[0]);
 				var example = syntax.examples[0] ? syntax.examples[0].example : undefined;
-				var embed = syntax.getEmbed(example)
+				var embed = syntax.getEmbed(syntax.getExample());
 					.setFooter(`Powered by skUnity Docs 2 | ${interaction.id}`);
 				reply(interaction, embed, 0, "EDIT_INITIAL");
 				break;
