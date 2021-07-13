@@ -1,22 +1,11 @@
+This is the official Skripthut bot's repl/repository.
+
+Code conventions will be posted later, as this isn't known yet.
 
 # Skripthut Bot
-#### **Application Command Formatting:**
-Base command:
-```json
-"name": string,
-"description": string,
-"type": number,
-"options": any[]
-```
-Options (same for nested):
-```json
-"type": number,
-"name": string,
-"description": string,
-"options": any[]
-```
-Formatted all in order. If empty (`[]` or `{}`), delete object.
+A registered command with no identical local command is deleted automatically.
 
+Local command JSON is fixed on register.
 ***
 
 #### **To-Do:**
