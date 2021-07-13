@@ -70,6 +70,7 @@ async function returnCatch(promise, catchCallback) {
 }
 
 require(`dotenv`).config({ path: './secrets/client.env/' });
+const htmlEntities = require(`html-entities`)
 const axios = require(`axios`);
 /**
  * @module Discord
@@ -477,10 +478,7 @@ async function getPunishmentDetails(millisTimespan) {
  * }} The info of the addon
 **/
 async function getAddonInfo(addon) {
-	const response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons/${addon}/`), (error) => {
-		console.error(error);
-		reply(interaction, `Error: Unable to get addon info (<https://api.skripttools.net/v4/addons/${addon}/>)`);
-	});
+	const response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons/${addon}/`), console.error);
 	if (!response) { return; }
 	return response.data.data;
 }
@@ -489,13 +487,11 @@ async function getAddonInfo(addon) {
  * Get addon info from a partial name
  * 
  * @param {string} name The partial name to search for
- * @returns 
+ * @returns The name and download files of the first matched addon
 **/
 async function getAddon(name) {
-	var response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons`), (error) => {
-		console.error(error);
-		reply(interaction, `Error: Unable to get addon list (https://api.skripttools.net/v4/addons/)`);
-	});
+	name = name.toLowerCase();
+	var response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons`), console.error);
 	if (!response) { return; }
 
 	var data = response.data.data;
@@ -618,7 +614,7 @@ class SkriptSyntax {
 		var fields = [
 			{ name: 'Pattern', value: getCodeBlock(this.pattern) }
 		];
-		if (!isEmpty(example)) { fields.push({ name: 'Example', value: getCodeBlock(example) }); }
+		if (!isEmpty(example)) { fields.push({ name: 'Example', value: getCodeBlock(htmlEntities.decode(example)) }); }
 		fields.push({ name: 'Addon', value: this.addon, inline: true }, { name: 'Requires', value: 'Skript', inline: true });
 
 		var embed = new Discord.MessageEmbed()
@@ -641,6 +637,7 @@ var skripthut;
 var tickets;
 
 var skUnityKey;
+var skriptHubKey;
 var noResults;
 client.on('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`);
@@ -653,6 +650,7 @@ client.on('ready', async () => {
 	tickets = "854954327268786227";
 
 	skUnityKey = "58b93076b6269edd";
+	skriptHubKey = "019e6835c735556d3c42492ed59493e84d197a97";
 	noResults = "https://i.imgur.com/AjlWaz5.png";
 
 	await registerCommands(guildId).catch(console.error);
@@ -723,7 +721,7 @@ client.on('ready', async () => {
 			
 				reply(interaction, `Sending...`, convertBitsToBitField(7));
 
-				var addon = await getAddon(args.name.toLowerCase());
+				var addon = await getAddon(args.name);
 				if (!addon) {
 					reply(interaction, 
 						new Discord.MessageEmbed()
@@ -740,7 +738,10 @@ client.on('ready', async () => {
 				var file = files[files.length - 1];
 
 				var addonInfo = await getAddonInfo(file);
-				if (!addonInfo) { return; }
+				if (!addonInfo) {
+					reply(interaction, `Error: Unable to get addon info (<https://api.skripttools.net/v4/addons/${addon}/>)`);
+					return;
+				}
 
 				var download = addonInfo.download;
 				var depends = addonInfo.depend;
@@ -782,7 +783,10 @@ client.on('ready', async () => {
 				}
 
 				var syntax = new SkriptSyntax(syntaxList[0]);
-				var embed = syntax.getEmbed(await syntax.getExample())
+				console.log(syntax);
+				var example = syntax.examples[0] ? syntax.examples[0].example : undefined;
+				console.log(example);
+				var embed = syntax.getEmbed(example)
 					.setFooter(`Powered by skUnity Docs 2 | ${interaction.id}`);
 				reply(interaction, embed, 0, "EDIT_INITIAL");
 				break;
@@ -1817,8 +1821,6 @@ async function reply(interaction, response, flags = 0, type = "SEND", deletable 
 		 * The response message sent for the interaction
 		**/
 		const message = await channel.messages.fetch(message_id, true, true);
-
-		console.log('message', responseMessage, message_id);
 
 		await message.react('❌');
 		
