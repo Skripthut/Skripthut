@@ -1,0 +1,82 @@
+{
+    "name": "reactionrole",
+    "description": "Base command for reaction role management",
+    "type": 1,
+    "options": [
+        {
+            "type": 1,
+            "name": "create",
+            "description": "Create a reaction role message in a specified channel with a specific emote",
+            "options": [
+                {
+                    "type": 7,
+                    "name": "channel",
+                    "description": "The desired channel to send the message to",
+                    "required": true
+                },
+                {
+                    "type": 3,
+                    "name": "message",
+                    "description": "The reaction role message to send",
+                    "required": true
+                },
+                {
+                    "type": 3,
+                    "name": "emote",
+                    "description": "The tag of an emote (i.e. '857360464329572363' or 'Skripthut' for Skripthut, or '📰' for newspaper)",
+                    "required": true
+                },
+                {
+                    "type": 8,
+                    "name": "role",
+                    "description": "The role you want the reaction role message to have",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "type": 1,
+            "name": "add",
+            "description": "Add a role and reaction to a reaction role message",
+            "options": [
+                {
+                    "type": 3,
+                    "name": "message",
+                    "description": "The message URL of the reaction role message",
+                    "required": true
+                },
+                {
+                    "type": 3,
+                    "name": "emote",
+                    "description": "The tag of an emote (i.e. '857360464329572363' or 'Skripthut' for Skripthut, or '📰' for newspaper)",
+                    "required": true
+                },
+                {
+                    "type": 8,
+                    "name": "role",
+                    "description": "The role you want to add to the reaction role message",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "type": 1,
+            "name": "remove",
+            "description": "Remove a role from a reaction role message",
+            "options": [
+                {
+                    "type": 3,
+                    "name": "message",
+                    "description": "The message URL of the reaction role message",
+                    "required": true
+                },
+                {
+                    "type": 8,
+                    "name": "role",
+                    "description": "The role you want to remove from the reaction role message",
+                    "required": true
+                }
+            ]
+        }
+    ]
+}

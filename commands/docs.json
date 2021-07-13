@@ -1,0 +1,13 @@
+{
+    "name": "docs",
+    "description": "Search the skUnity docs",
+    "type": 1,
+    "options": [
+        {
+            "type": 3,
+            "name": "query",
+            "description": "The search query (i.e. \"kill from:skript type:effect\")",
+            "required": true
+        }
+    ]
+}

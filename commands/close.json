@@ -1,0 +1,5 @@
+{
+    "name": "close",
+    "description": "Close your current ticket channel",
+    "type": 1
+}

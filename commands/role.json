@@ -1,0 +1,67 @@
+{
+    "name": "role",
+    "description": "Obtain information about all/specific roles, or manage the roles of a member",
+    "type": 1,
+    "options": [
+        {
+            "type": 1,
+            "name": "roles",
+            "description": "List all the guild's roles",
+            "options": [
+                {
+                    "type": 8,
+                    "name": "role",
+                    "description": "List all the details of the specified role"
+                }
+            ]
+        },
+        {
+            "type": 1,
+            "name": "grant",
+            "description": "Give a role to the member",
+            "options": [
+                {
+                    "type": 6,
+                    "name": "member",
+                    "description": "The member whom you want to add the role to",
+                    "required": true
+                },
+                {
+                    "type": 8,
+                    "name": "role",
+                    "description": "The role you want to give to the member",
+                    "required": true
+                },
+                {
+                    "type": 3,
+                    "name": "reason",
+                    "description": "The reason why you granted this role (defaults to \"Granted by [Your Tag]\")"
+                }
+            ]
+        },
+        {
+            "type": 1,
+            "name": "revoke",
+            "description": "Remove a role from the member",
+            "options": [
+                {
+                    "type": 6,
+                    "name": "member",
+                    "description": "The member whom you want to remove the role from",
+                    "required": true
+                },
+                {
+                    "type": 8,
+                    "name": "role",
+                    "description": "The role you want to remove from the member",
+                    "required": true
+                },
+                {
+                    "type": 3,
+                    "name": "reason",
+                    "description": "The reason why you removed this role (defaults to \"Removed by [Your Tag]\")"
+                }
+            ]
+        }
+    ]
+}

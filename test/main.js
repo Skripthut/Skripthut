@@ -18,12 +18,13 @@ async function returnCatch(promise, catchCallback = () => {}) {
 
 var skriptHubAPIVersion = "v1";
 var skriptHubAPIKey = "019e6835c735556d3c42492ed59493e84d197a97";
-async function main() {
-	var response = await returnCatch(axios.get(`http://skripthub.net/api/${skriptHubAPIVersion}/addon/`, {
-		headers: {
-			Authorization: `Token ${skriptHubAPIKey}` 
-		}
-	}));
-	console.log(response);
-}
-main();
+(async function() {
+
+var response = await returnCatch(axios.get(`http://skripthub.net/api/${skriptHubAPIVersion}/addon/`, {
+	headers: {
+		Authorization: `Token ${skriptHubAPIKey}` 
+	}
+}));
+console.log(response);
+
+})();
