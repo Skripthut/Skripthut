@@ -508,7 +508,7 @@ async function getAddon(name) {
  * @returns {{id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}
 **/
 async function searchForSyntax(query) {
-	var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=doSearch&query=${query}`));
+	var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityAPIKey}&function=doSearch&query=${query}`));
 	if (!response) { return; }
 
 	/** @type {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}}} **/
@@ -636,8 +636,9 @@ var skripter;
 var skripthut;
 var tickets;
 
-var skUnityKey;
-var skriptHubKey;
+var skUnityAPIKey;
+var skriptHubAPIVersion;
+var skriptHubAPIKey;
 var noResults;
 client.on('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`);
@@ -649,8 +650,9 @@ client.on('ready', async () => {
 	skripthut = "https://i.imgur.com/jumFMJ5.png";
 	tickets = "854954327268786227";
 
-	skUnityKey = "58b93076b6269edd";
-	skriptHubKey = "019e6835c735556d3c42492ed59493e84d197a97";
+	skUnityAPIKey = "58b93076b6269edd";
+	skriptHubAPIVersion = "v1";
+	skriptHubAPIKey = "019e6835c735556d3c42492ed59493e84d197a97";
 	noResults = "https://i.imgur.com/AjlWaz5.png";
 
 	await registerCommands(guildId).catch(console.error);
@@ -783,9 +785,7 @@ client.on('ready', async () => {
 				}
 
 				var syntax = new SkriptSyntax(syntaxList[0]);
-				console.log(syntax);
 				var example = syntax.examples[0] ? syntax.examples[0].example : undefined;
-				console.log(example);
 				var embed = syntax.getEmbed(example)
 					.setFooter(`Powered by skUnity Docs 2 | ${interaction.id}`);
 				reply(interaction, embed, 0, "EDIT_INITIAL");
@@ -1778,7 +1778,6 @@ async function reply(interaction, response, flags = 0, type = "SEND", deletable 
 	}
 	if (flagsField.includes(6) || type === "SEND") { deletable = false; }
 	if (deletable) {
-		console.log(flagsField);
 		/**
 		 * The ID of the guild of the interaction
 		 * @type {Discord.Snowflake}
