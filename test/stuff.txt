@@ -1,1 +1,0 @@
-{id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string}[]
