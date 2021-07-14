@@ -1,4 +1,4 @@
-This is the official Skripthut bot's repl/repository.
+This is the official Skripthut bot project.
 
 Code conventions will be posted later, as this isn't known yet.
 

@@ -1,7 +1,6 @@
 {
     "name": "remindme",
     "description": "Send a reminder at a certain date or after a certain timespan",
-    "type": 1,
     "options": [
         {
             "type": 1,

@@ -23,9 +23,18 @@ var skriptHubAPIAuthorization = {
 		Authorization: `Token ${skriptHubAPIKey}` 
 	}
 };
+
+console.log(require('querystring').stringify({ foo: 'bar' }));
+
 (async function() {
 
 	var response = await returnCatch(axios.get(`http://skripthub.net/api/${skriptHubAPIVersion}/addon/`, skriptHubAPIAuthorization));
 	console.log(response.data);
 
 })();
+/*(async function() {
+
+	var response = await returnCatch(axios.post(`https://forums.skunity.com/api/index.php?oauth/token`));
+	console.log(response.data);
+
+})();*/

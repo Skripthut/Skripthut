@@ -458,9 +458,10 @@ async function getPunishmentDetails(millisTimespan) {
 }
 
 /**
- * Gets addon info from a specified JAR file
+ * Gets addon info from a specified addon identifier
  * 
- * @param {string} addon The JAR file of the addon
+ * @param {string} addon The identifier of the addon (JAR file for SkriptTools, URL for SkriptHub)
+ * @param api The desired API for the addon
  * @returns 
  * {{
  * author: string[],
@@ -477,17 +478,60 @@ async function getPunishmentDetails(millisTimespan) {
  * depend: {}
  * }} The info of the addon
 **/
-async function getAddonInfo(addon) {
-	const response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons/${addon}/`), console.error);
-	if (!response) { return; }
-	return response.data.data;
+
+async function getAddonInfo(addon, api = 'skripttools') {
+	if (api === 'skripttools') {
+		const response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons/${addon}/`), console.error);
+		if (!response) { return; }
+		return response.data.data;
+	}
+
+	else if (api === 'skripthub') {
+		var url = addon.url;
+		var match = url.match(/https:\/\/github\.com\/([\w-]+)\/([\w-]+)(?:\/releases)?/i);
+		if (!match) { 
+			return {
+				author: [ addon.author ],
+				plugin: addon.name,
+				website: url,
+				depend: {}
+			};
+		}
+
+		var response = await returnCatch(axios.get(`https://api.github.com/repos/${match[1]}/${match[2]}/releases`, {
+			headers: {
+				accept: 'application/vnd.github.v3+json'
+			},
+			params: {
+				per_page: 1,
+				page: 1
+			}
+		}));
+		if (!response) { return; }
+
+		var data = response.data[0];
+		var asset = data.assets[0];
+		var result = {
+			author: [ addon.author ],
+			plugin: addon.name,
+			version: data.tag_name,
+			bytes: asset.size,
+			download: asset.browser_download_url,
+			website: url,
+			sourcecode: data.zipball_url,
+			depend: {}
+		}
+
+		console.log('result', result);
+		return result;
+	}
 }
 
 /**
  * Get addon info from a partial name
  * 
  * @param {string} name The partial name to search for
- * @param api The desired api to use for searching (skripttools or skripthub)
+ * @param api The desired API to use for searching (skripttools or skripthub)
  * @returns A few details of the first matched addon
 **/
 async function getAddon(name, api = 'skripttools') {
@@ -503,7 +547,14 @@ async function getAddon(name, api = 'skripttools') {
 	}
 
 	else if (api === 'skripthub') {
-
+		var response = await returnCatch(axios.get(`http://skripthub.net/api/${skriptHubAPIVersion}/addon/`, skriptHubAPIAuth));
+		if (!response) { return; }
+		
+		var data = response.data;
+		for (const addon of data) {
+			let addonName = addon.name;
+			if (addonName.toLowerCase().includes(name)) { return { name: addonName, author: addon.author, url: addon.url }; }
+		}
 	}
 	return;
 }
@@ -557,35 +608,11 @@ const getCodeBlock = (string, format = 'vb') => `\`\`\`${format}\n${string}\`\`\
 class SkriptSyntax {
 	// {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {stuff}[]}}}
 
-    /** 
-	 * @param
-	 * {{
-	 * id: string,
-	 * name: string,
-	 * doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'),
-	 * desc: string,
-	 * addon: string,
-	 * version: string,
-	 * pattern: string,
-	 * plugin: string,
-	 * eventvalues: string,
-	 * changers: string,
-	 * returntype: string,
-	 * is_array: ('0' | '1'),
-	 * tags: string,
-	 * reviewed: ('true' | 'false'),
-	 * versions: string,
-	 * examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[],
-	 * info: {status: string},
-	 * perc: number
-	 * }} syntax The syntax object to convert to a SkriptSyntax object
-	**/
-
 	/**
 	 * Get access to SkriptSyntax methods using a skUnity syntax object
 	 * 
 	 * @param syntax The syntax object to convert to a SkriptSyntax object
-	 * @param api The api the syntax originates from (skunity or skripthub)
+	 * @param {('skunity' | 'skripthub')} api The api the syntax originates from (skunity or skripthub)
 	 * @returns The new SkriptSyntax object
 	**/
 	constructor(syntax, api = 'skunity') {
@@ -626,7 +653,7 @@ class SkriptSyntax {
 	**/
 	async getExample() {
 		if (this.api === 'skunity') {
-			var response = await catchAwait(axios.get(`https://docs.skunity.com/api/?key=${skUnityKey}&function=getExamplesByID&syntax=${this.id}`), console.error);
+			var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityAPIKey}&function=getExamplesByID&syntax=${this.id}`), console.error);
 			if (!response) { return; }
 			if (!response.data.result[0]) { return; }
 
@@ -672,7 +699,7 @@ var tickets;
 var skUnityAPIKey;
 var skriptHubAPIVersion;
 var skriptHubAPIKey;
-var skriptHubAPIAuthorization;
+var skriptHubAPIAuth;
 var noResults;
 client.on('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`);
@@ -687,7 +714,7 @@ client.on('ready', async () => {
 	skUnityAPIKey = "58b93076b6269edd";
 	skriptHubAPIVersion = "v1";
 	skriptHubAPIKey = "019e6835c735556d3c42492ed59493e84d197a97";
-	skriptHubAPIAuthorization = {
+	skriptHubAPIAuth = {
 		headers: {
 			Authorization: `Token ${skriptHubAPIKey}` 
 		}
@@ -755,14 +782,21 @@ client.on('ready', async () => {
 
 			// ADDON COMMAND
 			case 'addon':
-				if (!args.name) {
+				var addonName = args.name;
+				console.log('name', addonName);
+				if (!addonName) {
 					reply(interaction, `Hi`, convertBitsToBitField(6));
 					break;
 				}
+				var api = (args.api || 'SkriptTools').toLowerCase();
+				console.log('api', args.api);
 			
 				reply(interaction, `Sending...`, convertBitsToBitField(7));
 
-				var addon = await getAddon(args.name);
+				console.log('started thinking');
+
+				var addon = await getAddon(addonName, api);
+				console.log('addon', addon, addonName, api);
 				if (!addon) {
 					reply(interaction, 
 						new Discord.MessageEmbed()
@@ -775,12 +809,17 @@ client.on('ready', async () => {
 					return;
 				}
 
-				var files = addon.files;
-				var file = files[files.length - 1];
-
-				var addonInfo = await getAddonInfo(file);
+				if (api === 'skripttools') {
+					var files = addon.files;
+					var file = files[files.length - 1];
+					var addonInfo = await getAddonInfo(file, api);
+				}
+				else if (api === 'skripthub') {
+					var addonInfo = await getAddonInfo(addon, api);
+				}
+				console.log('addonInfo', addonInfo);
 				if (!addonInfo) {
-					reply(interaction, `Error: Unable to get addon info (<https://api.skripttools.net/v4/addons/${addon}/>)`);
+					reply(interaction, `Error: Unable to get addon info`, 0, "EDIT_INITIAL");
 					return;
 				}
 
@@ -809,8 +848,10 @@ client.on('ready', async () => {
 			case 'docs':
 				reply(interaction, "Getting syntax...", convertBitsToBitField(7));
 				var query = args.query;
+				var api = args.api.toLowerCase();
 
-				var syntaxList = await searchForSyntax(query);
+				var syntaxResult = await searchForSyntax(query, api);
+				var syntaxList = syntaxResult.result;
 				if (!syntaxList.length) { 
 					reply(interaction, 
 						new Discord.MessageEmbed()
@@ -824,9 +865,9 @@ client.on('ready', async () => {
 				}
 
 				var syntax = new SkriptSyntax(syntaxList[0]);
-				var example = syntax.examples[0] ? syntax.examples[0].example : undefined;
-				var embed = syntax.getEmbed(syntax.getExample());
-					.setFooter(`Powered by skUnity Docs 2 | ${interaction.id}`);
+				var example = await syntax.getExample();
+				var embed = syntax.getEmbed(example);
+				embed.footer = `Powered by ${(api === 'skunity') ? 'skUnity Docs 2' : 'SkriptHub Docs 1'} | ${interaction.id}`;
 				reply(interaction, embed, 0, "EDIT_INITIAL");
 				break;
 				// END DOCS COMMAND

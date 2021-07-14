@@ -1,7 +1,6 @@
 {
     "name": "createticket",
     "description": "Create a ticket message in specified channel with specified description",
-    "type": 1,
     "options": [
         {
             "type": 7,

@@ -1,7 +1,6 @@
 {
     "name": "reactionrole",
     "description": "Base command for reaction role management",
-    "type": 1,
     "options": [
         {
             "type": 1,
