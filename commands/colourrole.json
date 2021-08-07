@@ -1,6 +1,7 @@
 {
     "name": "colourrole",
     "description": "Base command for colour role management",
+    "type": 1,
     "options": [
         {
             "type": 1,

@@ -1,6 +1,7 @@
 {
     "name": "ban",
     "description": "Ban a member from the server",
+    "type": 1,
     "options": [
         {
             "type": 6,

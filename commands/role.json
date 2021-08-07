@@ -1,6 +1,7 @@
 {
     "name": "role",
     "description": "Obtain information about all/specific roles, or manage the roles of a member",
+    "type": 1,
     "options": [
         {
             "type": 1,

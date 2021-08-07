@@ -1,6 +1,7 @@
 {
     "name": "addon",
     "description": "Get information about an addon or lst all supported addons",
+    "type": 1,
     "options": [
         {
             "type": 3,

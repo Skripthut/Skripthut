@@ -1,6 +1,14 @@
 'use strict';
 
 /**
+ * Returns the logarithm of a number with a specified base, defaulting to E.
+ * 
+ * @param {number} argument The argument of the logarithm
+ * @param base The base of the logarithm
+**/
+const log = (argument, base = Math.E) => (base === Math.E) ? Math.log(argument) : Math.log(argument) / Math.log(base)
+
+/**
  * Returns a number limited between the specified minimum and maximum.
  * 
  * @param {number} number The desired number to limit
@@ -37,19 +45,18 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 /**
  * Returns a shuffled copy of the specified array using the Fisher-Yates Shuffle. Please advise from using this with massive arrays, since this can produce lag.
  * 
- * @param {any[]} array
- * @param {number} [totalElements] The total amount of elements to return (this value is limited to the length of the list -- negative or positive -- and defaults to the length of the list if unspecified)
- * @returns {any[]} Returns a shuffled copy of `array``
+ * @template {any[]} T
+ * @param {T} array
+ * @returns {T} Returns a shuffled copy of `array`
 **/
-function shuffle(array, totalElements) {
+function shuffle(array) {
 	var length = array.length;
-	totalElements = (totalElements === undefined) ? length : limit(totalElements, length * (-1) + 1, length);
 	var copy = [ ...array ];
 	for (let i = length - 1; i > 0; i--) {
 		const j = Math.floor(Math.random() * (i + 1));
 		[ copy[i], copy[j] ] = [ copy[j], copy[i] ];
 	}
-	return copy.slice(0, totalElements);
+	return copy;
 }
 
 console.log(shuffle([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ]));
@@ -57,10 +64,10 @@ console.log(shuffle([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ]));
 /**
  * Catches the specified Promise and runs a callback, and returns the specified Promise if resolved.
  * 
- * @template T
- * @param {Promise<T>} promise The promise to catch.
+ * @template {Promise<any>} T
+ * @param {T} promise The promise to catch.
  * @param {Function} catchCallback The callback to run on catch.
- * @returns {Promise<T>} `promise` if resolved, else `void`.
+ * @returns {T} `promise` if resolved, else `void`.
 **/
 async function returnCatch(promise, catchCallback) {
 	var caught;
@@ -69,8 +76,27 @@ async function returnCatch(promise, catchCallback) {
 	return promise;
 }
 
-require(`dotenv`).config({ path: './secrets/client.env/' });
-const htmlEntities = require(`html-entities`)
+/**
+ * Reads a file and parses it using JSON.
+ *
+ * @param {String} path The directory of the file you want to load.
+ * @returns Returns the stringified JSON as JavaScript object.
+**/
+const loadJSON = (path) => JSON.parse(fs.readFileSync(path, `utf8`));
+
+/**
+ * Stringifies an object using JSON and writes it into a file.
+ *
+ * @param {string} path The directory of the file you want to write.
+ * @param data The object to be stringified.
+ * @returns Returns the writeFile Promise.
+**/
+const writeJSON = (path, data) => fs.writeFile(path, JSON.stringify(data, null, 4), `utf8`);
+
+try {
+    require(`dotenv`).config({ path: './secrets/client.env/' });
+} catch(error) {}
+const htmlEntities = require(`html-entities`);
 const axios = require(`axios`);
 /**
  * @module Discord
@@ -80,27 +106,29 @@ const fs = require(`fs-extra`);
 const _ = require(`lodash`);
 
 const client = new Discord.Client(/*{ ws: { intents: Discord.Intents.PRIVILEGED } }*/);
+
+/** The main Skripthut database **/
 const discord = loadJSON('./database/discord.json');
 
-var metadata = {};
+const metadata = {};
 /**
  * Sets metadata tag of an object
  * 
- * @param object The object whose metadata to set (works as long as an id property is set)
+ * @param object The object which metadata to set (works as long as an id property is set)
  * @param {string} tag The metadata tag to set (works recursively)
  * @param value The value to set to
- * @param {number} [lifespan] The optional lifespan of the metadata (deletes after specified lifespan)
+ * @param {number} [lifespan] The optional lifespan of the metadata (deletes after specified lifespan in milliseconds)
  * @returns Returns the new metadata object
 **/
 function setMetadata(object, tag, value, lifespan) {
-	if (!object.id) { return; }
+	if (typeof tag !== 'string' || !object.id) { return; }
 	tag = `${object.constructor.name}.${object.id}.${tag}`;
 	if (lifespan) {
 		var now = Date.now();
-		var timeSet = `${tag}::timeSet`;
+		var timeSetTag = `${tag}::timeSet`;
 		metadata[timeSet] = now;
 		setTimeout(function() {
-			if (metadata[timeSet] === now) { _.unset(metadata, tag); delete metadata[timeSet]; }
+			if (metadata[timeSet] === now) { _.unset(metadata, tag); delete metadata[timeSetTag]; }
 		}, lifespan);
 	}
 	return _.set(metadata, tag, value);
@@ -109,7 +137,7 @@ function setMetadata(object, tag, value, lifespan) {
 /**
  * Gets metadata tag of an object
  * 
- * @param object The object whose metadata to get (works as long as an id property is set)
+ * @param object The object which metadata to get (works as long as an id property is set)
  * @param {string} [tag] The metadata tag to get (works recursively; returns all metadata if omitted)
  * @returns Returns the metadata tag of the object
 **/
@@ -123,7 +151,7 @@ function getMetadata(object, tag) {
 /**
  * Deletes metadata tag of an object
  * 
- * @param object The object whose metadata to delete (works as long as an id property is set)
+ * @param object The object which metadata to delete (works as long as an id property is set)
  * @param {string} tag The metadata tag to delete (works recursively)
  * @returns Returns true if the metadata tag is deleted, else false
 **/
@@ -135,7 +163,7 @@ function deleteMetadata(object, tag) {
 /**
  * Sets persistent value of an object
  * 
- * @param object The object whose persistent value to set (works as long as an id property is set)
+ * @param object The object which persistent value to set (works as long as an id property is set)
  * @param {string} tag The persistent value to set (works recursively)
  * @param value The value to set to
  * @returns Returns the new persistent value object
@@ -148,7 +176,7 @@ function setPersistent(object, tag, value) {
 /**
  * Gets persistent value of an object
  * 
- * @param object The object whose persistent value to get (works as long as an id property is set)
+ * @param object The object which persistent value to get (works as long as an id property is set)
  * @param {string} tag The persistent value to get (works recursively)
  * @returns Returns the persistent value of the object
 **/
@@ -160,7 +188,7 @@ function getPersistent(object, tag) {
 /**
  * Deletes persistent value of an object
  * 
- * @param object The object whose persistent value to delete (works as long as an id property is set)
+ * @param object The object which persistent value to delete (works as long as an id property is set)
  * @param {string} tag The persistent value to delete (works recursively)
  * @returns Returns true if the persistent value is deleted, else false
 **/
@@ -170,7 +198,7 @@ function deletePersistent(object, tag) {
 }
 
 /**
- * Color base for simple colours
+ * Color constant for simple colours
 **/
 const Color = {
 	RED: '#ff0000',
@@ -194,7 +222,7 @@ class ReactionRoleEmote {
 	 * Constructor for ReactionRoleEmote, returning an object with the message ID, the channel ID, the guild ID, and the role ID.
 	 *
 	 * @param {Discord.Message} message The specified Message of the ReactionRoleEmote.
-	 * @param {(Discord.Snowflake | Discord.Role)} role The specified Role or Role ID Snowflake of the ReactionRoleEmote.
+	 * @param {Discord.RoleResolvable} role The specified Role or Role ID Snowflake of the ReactionRoleEmote.
 	**/
 	constructor(message, role) {
 		/**
@@ -207,14 +235,15 @@ class ReactionRoleEmote {
 		 * @type {Discord.Snowflake}
 		**/
 		this.channel = message.channel.id;
+		const guild = message.guild;
 		/**
 		 * The ID of the reaction role message's guild
 		 * @type {Discord.Snowflake}
 		**/
-		this.guild = message.guild.id;
+		this.guild = guild.id;
 
 		var roleId;
-		if (message.guild.roles.cache.get(role)) { roleId = role; }
+		if (guild.roles.cache.get(role)) { roleId = role; }
 		else if ((role.constructor || {}).name === 'Role') { roleId = role.id; }
 		else { throw new Error('Given role parameter is not a valid role ID or Role'); }
 
@@ -227,14 +256,14 @@ class ReactionRoleEmote {
 	/**
 	 * Change the role of a ReactionRoleEmote.
 	 *
-	 * @param {(Discord.Snowflake | Discord.Role)} role The desired Role or Role ID Snowflake to change the role property of this to.
+	 * @param {Discord.RoleResolvable} role The desired Role or Role ID Snowflake to change the role property of this to.
 	**/
 	set setRole(role) {
 		var roleId = this.role;
 
-		if (message.guild.cache.get(role)) { roleId = role; }
+		if (client.guilds.cache.get(this.guild)?.roles.cache.get(role)) { roleId = role; }
 		else if (role.constructor.name === 'Role') { roleId = role.id; }
-		else { throw new Error('Given role parameter is not a valid role ID or Role') }
+		else { throw new Error('Given role parameter is not a valid role ID or Role'); }
 
 		/**
 		 * The ID of the reaction role
@@ -245,42 +274,20 @@ class ReactionRoleEmote {
 }
 
 /**
- * Read a file and parse it using JSON.
- *
- * @param {String} path The directory of the file you want to load.
- * @returns Returns the stringified JSON as JavaScript object.
-**/
-function loadJSON(path) {
-	return JSON.parse(fs.readFileSync(path, `utf8`));
-}
-/**
- * Stringifies JSON and writes it into a file.
- *
- * @param {String} path The directory of the file you want to write.
- * @param data The JSON to be stringified.
- * @returns Returns the writeFile Promise.
-**/
-async function writeJSON(path, data) {
-	return fs.writeFile(path, JSON.stringify(data, null, 4), `utf8`);
-}
-
-/**
  * Gets the application of the Discord client in a specific guild.
  *
- * @param {String} guildId The ID of the specific guild.
+ * @param {Discord.Snowflake} guildId The ID of the specific guild.
  * @returns Returns the application for the specified guild.
 **/
 function getApp(guildId) {
 	const app = client.api.applications(client.user.id);
-	if (guildId) {
-		app.guilds(guildId);
-	}
+	if (guildId) { app.guilds(guildId); }
 	return app;
 }
 /**
  * Delete all commands currently on Discord server.
  *
- * @param {string} guildId The ID of the guild which the commands you want to delete are on.
+ * @param {Discord.Snowflake} guildId The ID of the guild which the commands you want to delete are on.
  * @returns Returns once all commands are deleted.
 **/
 async function deleteCommands(guildId) {
@@ -297,9 +304,9 @@ async function deleteCommands(guildId) {
 /**
  * Register all commands stored in discord.json.
  *
- * @param {string} guildId The ID of the guild you want to register the commands onto.
- * @param {boolean} ignoreSame If true, do not register commands that are identical to already registered commands.
- * @param {boolean} deleteUnset If true, delete all commands that have no identical registered commands.
+ * @param {Discord.Snowflake} guildId The ID of the guild you want to register the commands onto.
+ * @param ignoreSame If true, do not register commands that are identical to already registered commands.
+ * @param deleteUnset If true, delete all commands that have no identical registered commands.
  * @returns Returns once all commands are registered.
 **/
 async function registerCommands(guildId, ignoreSame = true, fixJSON = true, deleteUnset = true) {
@@ -411,20 +418,24 @@ for (const key of Object.keys(millis)) {
 /**
  * Get millis from a formatted string:
  * 
- * { [x]s - seconds, [x]m - minutes, [x]h - hours, [x]d - days, [x]y - years } where [x] is any floating point number
+ * { [x]s - seconds, [x]m - minutes, [x]h - hours, [x]d - days, [x]y - years } where [x] is any number
  * 
  * @param {string} string The formatted string to parse
  * @returns Returns millis from formatted string
  * @example
- * var oneYearTwoDaysThreeSeconds = getMillisFromString('2d1y3s');
+ * var oneYearTwoDaysThreeSeconds = getMillisFromString('2d1y3s'); // 
 **/
 async function getMillisFromString(string) {
-	if (!string) { return NaN; }
+	if (!string) { return null; }
 	var millisTimespan = 0;
-	for (const key of Object.keys(timespanRegex)) {
-		[ ...string.matchAll(timespanRegex[key]) ].forEach((timespan) => {
-			millisTimespan += parseFloat(timespan[1]) * millis[key][1];
-		});
+
+	let key;
+    const addMillis = (timespan) => {
+		millisTimespan += parseFloat(timespan[1]) * millis[key][1];
+	}
+	
+	for (key of Object.keys(timespanRegex)) {
+		[ ...string.matchAll(timespanRegex[key]) ].forEach(addMillis);
 	}
 	return millisTimespan;
 }
@@ -434,8 +445,8 @@ async function getMillisFromString(string) {
  * @returns Returns an object containing the total milliseconds of the formatted timespan, and a readable timespan using said milliseconds
 **/
 async function getPunishmentDetails(millisTimespan) {
+	if (!millisTimespan) { return null; }
 	var now = Date.now();
-	if (!millisTimespan) { return {}; }
 	var timespan = await getMillisFromString(millisTimespan);
 	if (timespan === Infinity || timespan === NaN) { return null; }
 
@@ -445,7 +456,7 @@ async function getPunishmentDetails(millisTimespan) {
 	var time = [];
 	for (const key of Object.keys(millis).reverse()) {
 		var milliValue = Math.floor(timespan / millis[key][1]);
-		if (milliValue) { time.push(`${milliValue} ${milliValue === 1 ? key.substr(0, key.length - 1) : key}`); }
+		if (milliValue) { time = [ ... time, `${milliValue} ${milliValue === 1 ? key.substr(0, key.length - 1) : key}` ]; }
 		timespan -= milliValue * millis[key][1];
 	}
 
@@ -538,7 +549,7 @@ async function getAddon(name, api = 'skripttools') {
 	name = name.toLowerCase();
 	if (api === 'skripttools') {
 		var response = await returnCatch(axios.get(`https://api.skripttools.net/v4/addons`), console.error);
-		if (!response) { return; }
+		if (!response) { return null; }
 
 		var data = response.data.data;
 		for (const addon in data) {
@@ -547,12 +558,12 @@ async function getAddon(name, api = 'skripttools') {
 	}
 
 	else if (api === 'skripthub') {
-		var response = await returnCatch(axios.get(`http://skripthub.net/api/${skriptHubAPIVersion}/addon/`, skriptHubAPIAuth));
-		if (!response) { return; }
+		var response = await returnCatch(axios.get(`http://skripthub.net/api/${SkriptDocs.SkriptHubAPIVersion}/addon/`, SkriptDocs.SkriptHubAPIAuth));
+		if (!response) { return null; }
 		
 		var data = response.data;
 		for (const addon of data) {
-			let addonName = addon.name;
+			var addonName = addon.name;
 			if (addonName.toLowerCase().includes(name)) { return { name: addonName, author: addon.author, url: addon.url }; }
 		}
 	}
@@ -566,7 +577,7 @@ async function getAddon(name, api = 'skripttools') {
 **/
 async function searchForSyntax(query, api = 'skunity') {
 	if (api === 'skunity') {
-		var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityAPIKey}&function=doSearch&query=${query}`));
+		var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${SkriptDocs.SkUnityAPIKey}&function=doSearch&query=${query}`));
 		if (!response) { return { api: api, result: [] }; }
 
 		/** @type {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}}} **/
@@ -576,13 +587,13 @@ async function searchForSyntax(query, api = 'skunity') {
 	}
 
 	else if (api === 'skripthub') {
-		var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityAPIKey}&function=doSearch&query=${query}`));
+		var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${SkriptDocs.SkUnityAPIKey}&function=doSearch&query=${query}`));
 		if (!response) { return { api: api, result: [] }; }
 
 		/** @type {{response: string, result: {info: {returned: number, functionsRan: number, totalRecords: number}, records: {id: string, name: string, doc: ('events' | 'expressions' | 'effects' | 'conditions' | 'types'), desc: string, addon: string, version: string, pattern: string, plugin: string, eventvalues: string, changers: string, returntype: string, is_array: ('0' | '1'), tags: string, reviewed: ('true' | 'false'), versions: string, examples: {id: string, example: string, forid: string, votes: string, user_id: string, xf_id: string, date: string}[], info: {status: string}, perc: number}[]}}} **/
 		var data = response.data;
 
-		return { api: api, result: '' };
+		return { api: api, result: null };
 	}
 }
 
@@ -653,7 +664,7 @@ class SkriptSyntax {
 	**/
 	async getExample() {
 		if (this.api === 'skunity') {
-			var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${skUnityAPIKey}&function=getExamplesByID&syntax=${this.id}`), console.error);
+			var response = await returnCatch(axios.get(`https://docs.skunity.com/api/?key=${SkriptDocs.SkUnityAPIKey}&function=getExamplesByID&syntax=${this.id}`), console.error);
 			if (!response) { return; }
 			if (!response.data.result[0]) { return; }
 
@@ -696,11 +707,9 @@ var skripter;
 var skripthut;
 var tickets;
 
-var skUnityAPIKey;
-var skriptHubAPIVersion;
-var skriptHubAPIKey;
-var skriptHubAPIAuth;
+var SkriptDocs = {};
 var noResults;
+console.log('hello');
 client.on('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`);
 
@@ -711,12 +720,12 @@ client.on('ready', async () => {
 	skripthut = "https://i.imgur.com/jumFMJ5.png";
 	tickets = "854954327268786227";
 
-	skUnityAPIKey = "58b93076b6269edd";
-	skriptHubAPIVersion = "v1";
-	skriptHubAPIKey = "019e6835c735556d3c42492ed59493e84d197a97";
-	skriptHubAPIAuth = {
+	SkriptDocs.SkUnityAPIKey = "58b93076b6269edd";
+	SkriptDocs.SkriptHubAPIVersion = "v1";
+	SkriptDocs.SkriptHubAPIKey = "019e6835c735556d3c42492ed59493e84d197a97";
+	SkriptDocs.SkriptHubAPIAuth = {
 		headers: {
-			Authorization: `Token ${skriptHubAPIKey}` 
+			Authorization: `Token ${SkriptDocs.SkriptHubAPIKey}` 
 		}
 	};
 	noResults = "https://i.imgur.com/AjlWaz5.png";
@@ -764,15 +773,25 @@ client.on('ready', async () => {
 		/** The GuildMember version of the user who created the interaction **/
 		const member = guild.member(user);
 
-		const args = {};
-		if (options) {
-			for (const option of options) {
-				const { name, value } = option;
-				args[name] = value;
-			}
-		}
+		/**
+         * Format options received by an interaction into a more readable object.
+         * 
+         * @param options The options to format.
+         * @returns The formatted options object.
+        **/
+	    function formatOptions(options) {
+		    const args = {};
+		    if (options) {
+		    	for (const option of options) {
+				    const { name, value } = option;
+				    args[name] = value;
+		    	}
+	    	}
+			return args;
+	    }
+		const args = formatOptions(options);
 
-		var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
+		var logs = guild.channels.cache.get(discord.guilds?.[guild.id]?.message_logs);
 		if (logs) { logs.send(`${user.tag} (${user.id}) executed /${command}`); }
 
 		switch(command) {
@@ -788,7 +807,9 @@ client.on('ready', async () => {
 					reply(interaction, `Hi`, convertBitsToBitField(6));
 					break;
 				}
-				var api = (args.api || 'SkriptTools').toLowerCase();
+
+				var apiName = (args.api || 'SkriptTools');
+				var api = apiName.toLowerCase();
 				console.log('api', args.api);
 			
 				reply(interaction, `Sending...`, convertBitsToBitField(7));
@@ -836,7 +857,7 @@ client.on('ready', async () => {
 					.setTitle(plugin)
 					.setURL(download)
 					.addFields(fields)
-					.setFooter(`Powered by SkriptTools`);
+					.setFooter(`Powered by ${apiName}`);
 
 				if (addonInfo.description) { embed.description = addonInfo.description; }
 
@@ -886,7 +907,7 @@ client.on('ready', async () => {
 				var ticketChannel = guild.channels.cache.get(args.channel);
 				var message = args.message.replace(/%(n(?:ew)?l(?:ine)?|line ?break)%/g, "\n");
 				/** @type {Discord.Message} **/
-				var sentMessage = await ticketChannel.send(message)
+				var sentMessage = await ticketChannel.send(message);
 				discord.ticketMessages[sentMessage.id] = {
 					id: sentMessage.id,
 					description: args.description,
@@ -899,10 +920,11 @@ client.on('ready', async () => {
 
 			// CLOSE COMMAND
 			case 'close':
-				if (discord.tickets[channel_id]) {
-					var creator = guild.member(client.users.cache.get(discord.tickets[channel_id].member));
+				var ticket = discord.tickets?.[channel_id];
+				if (ticket) {
+					var creator = guild.member(client.users.cache.get(ticket.member));
 
-					if (discord.tickets[channel_id].closed) {
+					if (ticket.closed) {
 						reply(interaction, 'Closing permanently...');
 						await channel.delete("Ticket closed permanently");
 						delete discord.tickets[channel_id];
@@ -945,7 +967,7 @@ client.on('ready', async () => {
 						reply(interaction, `You don't have enough permission to grant ${role}!`, convertBitsToBitField(6));
 						break;
 					}
-					var target = guild.member(option.options[0].value);
+					let target = guild.member(option.options[0].value);
 					var reason = (option.options[2] || { value: `Granted by ${user.tag}`}).value;
 
 					reply(interaction, `Adding...`, convertBitsToBitField(6));
@@ -960,7 +982,7 @@ client.on('ready', async () => {
 						reply(interaction, `You don't have enough permission to revoke ${role}!`, convertBitsToBitField(6));
 						break;
 					}
-					var target = guild.member(option.options[0].value);
+					let target = guild.member(option.options[0].value);
 					var reason = (option.options[2] || { value: `Removed by ${user.tag}`}).value;
 
 					reply(interaction, `Removed ${role} from ${target}'s roles...`, convertBitsToBitField(6));
@@ -985,10 +1007,7 @@ client.on('ready', async () => {
 					}
 					var roles = Array.from(guild.roles.cache);
 					var roleInfo = [];
-					for (var i = 0; i < roles.length; i++) {
-						var role = roles[i][1];
-						roleInfo[i] = role;
-					}
+					for (let i = 0; i < roles.length; i++) { roleInfo[i] = roles[i][1]; }
 					reply(interaction, `${roleInfo}`, convertBitsToBitField(6));
 					break;
 				}
@@ -1059,7 +1078,7 @@ client.on('ready', async () => {
 					let reactionRoleMessage = reactionRoleChannel.send(reactionRoleMessageContent);
 					await reply(interaction, 'Sending...', convertBitsToBitField(6));
 
-					reactionRoleMessasge.then(async (message) => {
+					reactionRoleMessage.then(async (message) => {
 						await message.react(reactionRoleEmote);
 						discord.reactionRoleMessages[message.id] = {
 							id: message.id,
@@ -1204,8 +1223,11 @@ client.on('ready', async () => {
 
 			// COLOURROLE COMMAND
 			case 'colourrole':
-				reply(interaction, 'nuu', convertBitsToBitField(6));
-				break;
+				if (!member.hasPermission("ADMINISTRATOR")) {
+				    reply(interaction, 'nuu', convertBitsToBitField(6));
+				    break;
+		        }
+				
 				var roles = member.roles.cache;
 				var hasRoles =
 				(
@@ -1394,6 +1416,7 @@ client.on('ready', async () => {
 				if (type === 'at') {
 					if (time === 'help') {
 						var examples = [
+							'2019-09-07T-15:50+00',
 							'01 Jan 1970 00:00:00 GMT',
 							'2021 06 28',
 							'04 Dec 1995',
@@ -1406,13 +1429,15 @@ client.on('ready', async () => {
 							.setDescription(`This command uses the [JavaScript Date Format](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#description).`)
 							.addFields(
 								{ name: 'Format', value: 'One of the formats is the [ISO Date Format](https://www.ionos.ca/digitalguide/websites/web-development/iso-8601/). \nCheck out [JavaScript Date Time String Format](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#date_time_string_format) and [JavaScript Implementation-Specific Date Formats](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#fall-back_to_implementation-specific_date_formats) for more details.' },
-								{ name: 'Example Usage', value: '```' + examples.join('\n') + '```' }
+								{ name: 'Example Usage', value: getCodeBlock(examples.join('\n'), '') }
 							)
 							.setFooter(`Requested by ${user.tag}`, user.avatarURL());
 							
 						reply(interaction, embed, convertBitsToBitField(6));
 						break;
 					}
+					
+					const date = Date.parse(time);
 					if (!date) {
 						reply(interaction, `That's not a valid date!`, convertBitsToBitField(6));
 						break;
@@ -1472,10 +1497,19 @@ client.on('message', (message) => {
 		}
 		else if (lower.includes('!eval')) {
 			try {
-				eval(message.content.substr(6, lower.length)); 
-			} 
+				const result = eval(`(async () => { ${content.substr(6, lower.length)} })();`)
+				    .then((result) => {
+				    	if (result) {
+				    		const resultString = result.toString();
+				    		const resultStringLength = resultString.length;
+				    		if (resultStringLength && resultStringLength <= 5000) { channel.send(resultString); }
+				    	}
+				    });
+				console.log(result);
+			}
 			catch (error) {
-				if (error instanceof SyntaxError) { console.error(error.message); } 
+				console.log(error.constructor.name);
+				if (error instanceof SyntaxError || error instanceof ReferenceError) { console.error(error); } 
 				else { throw error; }
 			}
 		}
@@ -1541,15 +1575,15 @@ client.on('messageDeleteBulk', async (messages) => {
 client.on('guildMemberAdd', async (member) => {
 	const guild = member.guild;
 	const user = member.user;
-	client.channels.cache.get('854842141498277908').send(
-		shuffle(_.get(discord, `guilds.${guild.id}.joinMessages`) || [
+	client.channels.cache.get('854842141498277908')?.send(
+		shuffle(discord.guilds?.[guild.id]?.joinMessages || [
 			"\\:O It's ${user}, thanks for joining!",
 			"Welp, here's ${user}...",
 			"Well then, ${user}'s here...",
 			"Whoa, whoa, whoa, when did ${user} get here?",
 			"Ah shoot, here comes ${user}...",
 			"And then came ${user}!"
-		], 1)[0]
+		])[0]
 			.replace('${user}', user.toString()) // Replace ${user} with the user's tag (username#discriminator)
 			.replace('${user.tag}', user.tag) // Replace ${user.mention} with the user's mention
 			.replace('${guild}', guild.name) // Replace ${guild} with the guild name
@@ -1558,7 +1592,7 @@ client.on('guildMemberAdd', async (member) => {
 
 client.on('guildMemberRemove', (member) => {
 	var guild = member.guild;
-	var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
+	var logs = guild.channels.cache.get(discord.guilds?.[guild.id]?.message_logs);
 	if (logs) { logs.send(`${member} left ${guild}!`); }
 });
 
@@ -1590,7 +1624,7 @@ if (discord.lastActivation !== now) {
 discord.lastActivation = now;
 discord.activations++;
 
-/*var access = fs.createWriteStream(`./logs/${now}**${discord.activations}`);
+/*var access = fs.createWriteStream(`./logs/${now}**${discord.activations}.stdout`);
 process.stdout.write = process.stderr.write = access.write.bind(access);
 
 process.on('uncaughtException', function(err) {
@@ -1608,7 +1642,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 		message.delete();
 	}
 
-	const ticket = discord.ticketMessages[message.id];
+	const ticket = discord.ticketMessages?.[message.id];
 	if (ticket) {
 		await message.reactions.resolve("📰").users.remove(user.id);
 		if (getStat(member, "hasTicket")) { return; }
@@ -1668,11 +1702,12 @@ client.on('messageReactionAdd', async (reaction, user) => {
 					)
 					.setFooter(`Requested by ${user.tag}`, user.avatarURL());
 
-				discord.tickets[channel.id] = {
+                _.set(discord, `tickets.${channel.id}`, {
 					id: channel.id,
+					name: ticketName,
 					member: user.id,
 					message: message.id
-				}
+				});
 
 				setTimeout(async function() {
 					await channel.send(`Hey, ${user}! Thanks for creating a ticket.`);
@@ -1964,4 +1999,8 @@ async function reloadDiscordJSON() {
 	writeJSON('./database/discord.json', discord);
 }
 
+/*console.log('proceeding to log in', process.env.TOKEN);
+client.on('rateLimit', (...args) => console.log('rateLimit', ...args));
+client.on('debug', console.debug);*/
 client.login(process.env.TOKEN);
+console.log('started log in procedure')

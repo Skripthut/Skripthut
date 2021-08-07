@@ -1,4 +1,5 @@
 {
     "name": "test",
-    "description": "testcommand"
+    "description": "testcommand",
+    "type": 1
 }

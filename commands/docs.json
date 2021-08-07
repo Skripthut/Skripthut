@@ -1,6 +1,7 @@
 {
     "name": "docs",
     "description": "Search the skUnity docs",
+    "type": 1,
     "options": [
         {
             "type": 3,

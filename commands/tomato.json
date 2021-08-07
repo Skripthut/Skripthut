@@ -1,4 +1,5 @@
 {
     "name": "tomato",
-    "description": "tomato"
+    "description": "tomato",
+    "type": 1
 }
