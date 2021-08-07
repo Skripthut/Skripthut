@@ -1,18 +1,18 @@
 {
     "name": "docs",
     "description": "Search the skUnity docs",
-    "type": 1,
     "options": [
         {
-            "type": 3,
+            "type": "STRING",
             "name": "query",
             "description": "The search query (i.e. \"kill from:skript type:effect\")",
             "required": true
         },
         {
-            "type": 3,
+            "type": "STRING",
             "name": "api",
             "description": "Which docs API to use (defaults to skUnity)",
+            "required": false,
             "choices": [
                 {
                     "name": "skUnity Docs v2",

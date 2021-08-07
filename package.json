@@ -1,6 +1,6 @@
 {
-  "name": "Skripthut",
-  "version": "1.1.0",
+  "name": "skripthut-bot",
+  "version": "1.0.0",
   "description": "kool package",
   "main": "index.js",
   "scripts": {
@@ -11,11 +11,11 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.1",
-    "discord.js": "^12.5.3",
+    "discord.js": "^13.0.0",
     "fs-extra": "^10.0.0",
     "html-entities": "^2.3.2",
     "jsdoc": "^3.6.7",
     "lodash": "^4.17.21",
-    "node": "^14.17.4"
+    "node": "^16.6.1"
   }
 }

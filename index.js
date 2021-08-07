@@ -66,12 +66,12 @@ console.log(shuffle([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ]));
  * 
  * @template {Promise<any>} T
  * @param {T} promise The promise to catch.
- * @param {Function} catchCallback The callback to run on catch.
+ * @param {Function} onCatch The callback to run on catch.
  * @returns {T} `promise` if resolved, else `void`.
 **/
-async function returnCatch(promise, catchCallback) {
+async function returnCatch(promise, onCatch) {
 	var caught;
-	await promise.catch(() => { catchCallback(); caught = true; });
+	await promise.catch(() => { onCatch(); caught = true; });
 	if (caught) { return; }
 	return promise;
 }
@@ -105,10 +105,18 @@ const Discord = require(`discord.js`);
 const fs = require(`fs-extra`);
 const _ = require(`lodash`);
 
-const client = new Discord.Client(/*{ ws: { intents: Discord.Intents.PRIVILEGED } }*/);
+var intentsField = 0;
+for (let i = 0; i <= Object.keys(Discord.Intents.FLAGS); i++) { intentsField += Math.pow(2, i); }
+
+const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /* All Intents */ });
 
 /** The main Skripthut database **/
-const discord = loadJSON('./database/discord.json');
+var discord;
+try {
+	discord = loadJSON('./database/discord.json');
+} catch(error) {
+	writeJSON('./database/discord.json', {});
+}
 
 const metadata = {};
 /**
@@ -304,25 +312,26 @@ async function deleteCommands(guildId) {
 /**
  * Register all commands stored in discord.json.
  *
- * @param {Discord.Snowflake} guildId The ID of the guild you want to register the commands onto.
+ * @param {Discord.Guild} guild The guild you want to register the commands onto.
  * @param ignoreSame If true, do not register commands that are identical to already registered commands.
  * @param deleteUnset If true, delete all commands that have no identical registered commands.
  * @returns Returns once all commands are registered.
 **/
-async function registerCommands(guildId, ignoreSame = true, fixJSON = true, deleteUnset = true) {
+async function registerCommands(guild, ignoreSame = true, fixJSON = true, deleteUnset = true) {
 	console.log('registering');
+	if (!client.application?.owner) { await client.application?.fetch(); }
 	
-	const app = getApp(guildId);
-	const appCommands = app.commands;
+	const appCommands = guild.commands;
 
 	if (ignoreSame || fixJSON || deleteUnset) {
-		var appCommandsArray = await appCommands.get();
+		var dynamicProperties = [ 'id', 'applicationId', 'version', 'guild', 'guildId', 'permissions', 'defaultPermission' ];
+		var appCommandsArray = await appCommands.fetch();
 		
 		var registeredCommands = {};
 		for (const appCommand of appCommandsArray) {
-			const id = appCommand.id;
-			[ 'id', 'application_id', 'version', 'guild_id', 'default_permission' ].forEach((key) => delete appCommand[key]);
-			registeredCommands[id] = appCommand;
+			const applicationCommand = appCommand[1];
+			dynamicProperties.forEach((key) => delete applicationCommand[key]);
+			registeredCommands[appCommand[0]] = applicationCommand;
 		}
 		
 		if (Object.keys(registeredCommands)) {
@@ -358,14 +367,12 @@ async function registerCommands(guildId, ignoreSame = true, fixJSON = true, dele
 		}
 
 		console.log(`register ${command.name}`);
-		await appCommands.post({
-			data: command
-		});
+		await appCommands.create(command);
 		discord.totalRegisteredCommands++;
 	}
 	
 	if ((fixJSON || deleteUnset) && entries.length) {
-		let newAppCommandsArray = await appCommands.get();
+		let newAppCommandsArray = await appCommands.fetch();
 		if (deleteUnset) {
 			for (let i = newAppCommandsArray.length - 1; i > -1; i--) {
 				const command = newAppCommandsArray[i];
@@ -381,14 +388,14 @@ async function registerCommands(guildId, ignoreSame = true, fixJSON = true, dele
 		if (fixJSON) {
 			let newAppCommandsDataArray = JSON.parse(JSON.stringify(newAppCommandsArray));
 			for (const newCommand of newAppCommandsDataArray) {
-				[ 'id', 'application_id', 'version', 'guild_id', 'default_permission' ].forEach((key) => delete newCommand[key]);
+				dynamicProperties.forEach((key) => delete newCommand[key]);
 			}
 			
 			async function fixCommandJSON(name) {
 				for (const newCommand of newAppCommandsDataArray) {
 					if (newCommand.name === name) {
 						console.log(`Fix ./commands/${name}.json`);
-						fs.writeFile(`./commands/${name}.json`, JSON.stringify(newCommand, null, 4), console.error);
+						fs.writeFile(`./commands/${name}.json`, JSON.stringify(newCommand, null, 4));
 						return;
 					}
 				}
@@ -730,9 +737,32 @@ client.on('ready', async () => {
 	};
 	noResults = "https://i.imgur.com/AjlWaz5.png";
 
-	await registerCommands(guildId).catch(console.error);
+	await registerCommands(guild).catch(console.error);
 
-	client.ws.on('INTERACTION_CREATE', async (interaction) => { // WebSocket Interaction Create Event (for slash commands)
+	client.on('raw', async (packet) => {
+		if ([ 'MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE' ].includes(packet.t)) {
+			const channel = client.channels.cache.get(packet.d.channel_id);
+			if (channel.messages.cache.get(packet.d.message_id)) { return };
+			channel.messages.fetch(packet.d.message_id).then((message) => {
+				const emoji = packet.d.emoji.id || packet.d.emoji.name;
+				const reaction = message.reactions.cache.get(emoji);
+				if (packet.t === 'MESSAGE_REACTION_ADD') {
+					client.emit('messageReactionAdd', reaction, client.users.cache.get(packet.d.user_id));
+				}
+				else {
+					client.emit('messageReactionRemove', reaction, client.users.cache.get(packet.d.user_id));
+				}
+			})
+				.catch(console.error);
+		}
+	});
+
+	setInterval(reloadDiscordJSON, 1000);
+});
+
+client.on('interactionCreate', async (interaction) => {
+	if (interaction.isCommand()) {
+		console.log(interaction.options, interaction.data);
 		/** @type {{name: string, options: any}} */
 		const { name, options } = interaction.data;
 		const command = name.toLowerCase();
@@ -804,7 +834,7 @@ client.on('ready', async () => {
 				var addonName = args.name;
 				console.log('name', addonName);
 				if (!addonName) {
-					reply(interaction, `Hi`, convertBitsToBitField(6));
+					reply(interaction, `Hi`, "reply", true);
 					break;
 				}
 
@@ -812,7 +842,7 @@ client.on('ready', async () => {
 				var api = apiName.toLowerCase();
 				console.log('api', args.api);
 			
-				reply(interaction, `Sending...`, convertBitsToBitField(7));
+				await deferReply(interaction);
 
 				console.log('started thinking');
 
@@ -833,10 +863,10 @@ client.on('ready', async () => {
 				if (api === 'skripttools') {
 					var files = addon.files;
 					var file = files[files.length - 1];
-					var addonInfo = await getAddonInfo(file, api);
+					var addonInfo = getAddonInfo(file, api);
 				}
 				else if (api === 'skripthub') {
-					var addonInfo = await getAddonInfo(addon, api);
+					var addonInfo = getAddonInfo(addon, api);
 				}
 				console.log('addonInfo', addonInfo);
 				if (!addonInfo) {
@@ -867,7 +897,8 @@ client.on('ready', async () => {
 
 			// DOCS COMMAND
 			case 'docs':
-				reply(interaction, "Getting syntax...", convertBitsToBitField(7));
+				await deferReply(interaction);
+
 				var query = args.query;
 				var api = args.api.toLowerCase();
 
@@ -900,12 +931,15 @@ client.on('ready', async () => {
 			// CREATETICKET COMMAND
 			case 'createticket':
 				if (!member.hasPermission("MANAGE_MESSAGES")) {
-					reply(interaction, permissionMessage, convertBitsToBitField(6));
+					reply(interaction, permissionMessage, "reply", true);
 					break;
 				}
-				await reply(interaction, 'Sending ticket messsage...', convertBitsToBitField(6, 7));
+
+				await deferReply(interaction);
+
 				var ticketChannel = guild.channels.cache.get(args.channel);
 				var message = args.message.replace(/%(n(?:ew)?l(?:ine)?|line ?break)%/g, "\n");
+
 				/** @type {Discord.Message} **/
 				var sentMessage = await ticketChannel.send(message);
 				discord.ticketMessages[sentMessage.id] = {
@@ -913,8 +947,9 @@ client.on('ready', async () => {
 					description: args.description,
 					channel: args.channel
 				};
+
 				await sentMessage.react(`📰`);
-				reply(interaction, 'Sent!', convertBitsToBitField(6), "EDIT_INITIAL");
+				reply(interaction, 'Sent!', "reply", true, "EDIT_INITIAL");
 				break;
 				// END CREATETICKET COMMAND
 
@@ -940,10 +975,10 @@ client.on('ready', async () => {
 					deleteStat(creator, "hasTicket");
 					discord.tickets[channel_id].closed = true;
 
-					reply(interaction, '__Do `/close` again to permanently close the ticket.__', convertBitsToBitField(7), "FOLLOW_UP");
+					reply(interaction, '__Do `/close` again to permanently close the ticket.__', "followUp");
 					break;
 				}
-				reply(interaction, 'You can only use this in a ticket channel!', convertBitsToBitField(6));
+				reply(interaction, 'You can only use this in a ticket channel!', "reply", true);
 				break;
 				// END CLOSE COMMAND
 
@@ -954,7 +989,7 @@ client.on('ready', async () => {
 			// ROLE COMMAND
 			case 'role':
 				if (!member.hasPermission("MANAGE_ROLES")) {
-					reply(interaction, permissionMessage, convertBitsToBitField(6));
+					reply(interaction, permissionMessage, "reply", true);
 					break;
 				}
 				var option = options[0];
@@ -964,28 +999,32 @@ client.on('ready', async () => {
 					var highestRole = member.roles.highest;
 					var role = guild.roles.cache.get(option.options[1].value);
 					if (highestRole.position <= role.position) {
-						reply(interaction, `You don't have enough permission to grant ${role}!`, convertBitsToBitField(6));
+						reply(interaction, `You don't have enough permission to grant ${role}!`, "reply", true);
 						break;
 					}
 					let target = guild.member(option.options[0].value);
 					var reason = (option.options[2] || { value: `Granted by ${user.tag}`}).value;
 
-					reply(interaction, `Adding...`, convertBitsToBitField(6));
+					reply(interaction, `Adding...`, "reply", true)
+					reply(interaction, `Adding...`, "reply", true);
 					await target.roles.add(role, reason);
-					reply(interaction, `Added ${role} to ${target}'s roles!`, convertBitsToBitField(6, 7), "FOLLOW_UP");
+
+					await reply(interaction, `Added ${role} to ${target}'s roles!`, "followUp", true);
 					break;
 				}
 				if (type === 'revoke') {
 					var highestRole = member.roles.highest;
 					var role = guild.roles.cache.get(option.options[1].value);
 					if (highestRole.position <= role.position) {
-						reply(interaction, `You don't have enough permission to revoke ${role}!`, convertBitsToBitField(6));
+						reply(interaction, `You don't have enough permission to revoke ${role}!`, "reply", true);
 						break;
 					}
+
+					await deferReply(interaction, true);
 					let target = guild.member(option.options[0].value);
 					var reason = (option.options[2] || { value: `Removed by ${user.tag}`}).value;
 
-					reply(interaction, `Removed ${role} from ${target}'s roles...`, convertBitsToBitField(6));
+					reply(interaction, `Removed ${role} from ${target}'s roles...`, "editReply", true);
 					target.roles.remove(role, reason);
 					break;
 				}
@@ -1002,23 +1041,23 @@ client.on('ready', async () => {
 								{ name: 'Extra Info', value: 'Do `/close` to close the ticket. You may only have one ticket at a time.'}
 							)
 							.setFooter(`Requested by ${user.tag}`, user.avatarURL());
-						reply(interaction, embed, convertBitsToBitField(6));
+						reply(interaction, embed, "reply", true);
 						break;
 					}
 					var roles = Array.from(guild.roles.cache);
 					var roleInfo = [];
 					for (let i = 0; i < roles.length; i++) { roleInfo[i] = roles[i][1]; }
-					reply(interaction, `${roleInfo}`, convertBitsToBitField(6));
+					reply(interaction, `${roleInfo}`, "reply", true);
 					break;
 				}
-				reply(interaction, `noob`, convertBitsToBitField(6));
+				reply(interaction, `noob`, "reply", true);
 				break;
 			// END ROLE COMMAND
 
 			// REACTIONROLE COMMAND
 			case 'reactionrole':
 				if (!member.hasPermission("MANAGE_ROLES")) {
-					reply(interaction, permissionMessage, convertBitsToBitField(6));
+					reply(interaction, permissionMessage, "reply", true);
 					break;
 				}
 				var option = options[0];
@@ -1067,7 +1106,7 @@ client.on('ready', async () => {
 					}
 
 					if (!reactionRoleEmoteId) {
-						reply(interaction, `That's not a valid emote!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid emote!`, "reply", true);
 						break;
 					}
 
@@ -1076,7 +1115,7 @@ client.on('ready', async () => {
 					reactionRole = option.options[3].value;
 
 					let reactionRoleMessage = reactionRoleChannel.send(reactionRoleMessageContent);
-					await reply(interaction, 'Sending...', convertBitsToBitField(6));
+					await reply(interaction, 'Sending...', "reply", true);
 
 					reactionRoleMessage.then(async (message) => {
 						await message.react(reactionRoleEmote);
@@ -1093,18 +1132,18 @@ client.on('ready', async () => {
 					let ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
 
 					if (ids[1] !== guild_id) {
-						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, "reply", true);
 						break;
 					}
 					reactionRoleChannel = guild.channels.cache.get(ids[2]);
 					if (!reactionRoleChannel) {
-						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, "reply", true);
 						break;
 					}
 					reactionRoleMessageId = ids[3];
 					reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
 					if (!reactionRoleMessage) {
-						reply(interaction, `That's not a valid message URL (message ID invalid)!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid message URL (message ID invalid)!`, "reply", true);
 						break;
 					}
 
@@ -1120,26 +1159,26 @@ client.on('ready', async () => {
 					}
 
 					if (!reactionRoleEmoteId) {
-						reply(interaction, `That's not a valid emote!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid emote!`, "reply", true);
 						break;
 					}
 
 					reactionRole = option.options[2].value;
 
-					_reactionRoleMessage = _.get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
+					_reactionRoleMessage = discord.reactionRoleMessages?.[reactionRoleMessageId];
 					if (_reactionRoleMessage) {
 						const emotes = _reactionRoleMessage.emotes;
 						if (emotes[reactionRoleEmoteId]) {
-							reply(interaction, `This reaction role message already has this emote set!`, convertBitsToBitField(6));
+							reply(interaction, `This reaction role message already has this emote set!`, "reply", true);
 							break;
 						}
 						if (JSON.stringify(emotes).includes(reactionRole)) {
-							reply(interaction, `This reaction role message already has this role set!`, convertBitsToBitField(6));
+							reply(interaction, `This reaction role message already has this role set!`, "reply", true);
 							break;
 						}
 					}
 
-					await reply(interaction, 'Adding...', convertBitsToBitField(6));
+					await reply(interaction, 'Adding...', "reply", true);
 					await reactionRoleMessage.react(reactionRoleEmote);
 					if (!_reactionRoleMessage) {
 						_.set(discord, `reactionRoleMessages.${reactionRoleMessageId}`, 
@@ -1156,26 +1195,26 @@ client.on('ready', async () => {
 					var ids = Array.from(option.options[0].value.matchAll(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/))[0]; // Get ID's from URL
 
 					if (ids[1] !== guild_id) {
-						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid message URL (guild ID invalid)!`, "reply", true);
 						break;
 					}
 					reactionRoleChannel = guild.channels.cache.get(ids[2]);
 
 					if (!reactionRoleChannel) {
-						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid message URL (channel ID invalid)!`, "reply", true);
 						break;
 					}
 					reactionRoleMessageId = ids[3];
 					reactionRoleMessage = await reactionRoleChannel.messages.fetch(reactionRoleMessageId);
 					if (!reactionRoleMessage) {
-						reply(interaction, `That's not a valid message URL (message ID invalid)!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid message URL (message ID invalid)!`, "reply", true);
 						break;
 					}
 
-					_reactionRoleMessage = _.get(discord, `reactionRoleMessages.${reactionRoleMessageId}`);
+					_reactionRoleMessage = discord.reactionRoleMessages?.[reactionRoleMessageId];
 
 					if (!_reactionRoleMessage) {
-						reply(interaction, `This message doesn't have any reaction roles!`, convertBitsToBitField(6));
+						reply(interaction, `This message doesn't have any reaction roles!`, "reply", true);
 						break;
 					}
 
@@ -1202,7 +1241,7 @@ client.on('ready', async () => {
 					var removeEmotesResult = removeEmotes(emotes);
 
 					if (!removeEmotesResult) {
-						reply(interaction, `This message doesn't have that role!`, convertBitsToBitField(6));
+						reply(interaction, `This message doesn't have that role!`, "reply", true);
 						break;
 					}
 
@@ -1214,17 +1253,17 @@ client.on('ready', async () => {
 
 					var reactionRole = guild.roles.cache.get(reactionRoleId);
 
-					reply(interaction, `Removing ${reactionRole} from the specified message...`, convertBitsToBitField(6));
+					reply(interaction, `Removing ${reactionRole} from the specified message...`, "reply", true);
 					reactionRoleMessage.reactions.resolve(reactionRoleEmoteId).remove();
 					break;
 				}
-				reply(interaction, 'bruh moment', convertBitsToBitField(6));
+				reply(interaction, 'bruh moment', "reply", true);
 				break;
 
 			// COLOURROLE COMMAND
 			case 'colourrole':
 				if (!member.hasPermission("ADMINISTRATOR")) {
-				    reply(interaction, 'nuu', convertBitsToBitField(6));
+				    reply(interaction, 'nuu', "reply", true);
 				    break;
 		        }
 				
@@ -1238,7 +1277,7 @@ client.on('ready', async () => {
 					roles.get('854841465087852574')
 				);
 				if (!hasRoles && !member.hasPermission("MANAGE_ROLES")) {
-					reply(interaction, permissionMessage, convertBitsToBitField(6));
+					reply(interaction, permissionMessage, "reply", true);
 					break;
 				}
 
@@ -1268,7 +1307,7 @@ client.on('ready', async () => {
 									.setAuthor('Skripthut', skripthut, skripthut)
 									.setDescription(`Created the colour role ${result}`)
 									.setFooter(`Requested by ${user.tag}`, user.avatarURL());
-								reply(interaction, embed, convertBitsToBitField(6));
+								reply(interaction, embed, "reply", true);
 								await member.roles.add(result.id);
 
 								var colourRole = getStat(member, "colourRole");
@@ -1279,11 +1318,11 @@ client.on('ready', async () => {
 									}
 								}
 								setStat(member, "colourRole", result.id);
-								reply(interaction, `Added ${result} to your roles!`, convertBitsToBitField(6, 7), "FOLLOW_UP");
+								reply(interaction, `Added ${result} to your roles!`, "followUp", true);
 							});
 						break;
 					}
-					reply(interaction, `Please input a valid HEX code as a colour.`, convertBitsToBitField(6));
+					reply(interaction, `Please input a valid HEX code as a colour.`, "reply", true);
 					break;
 				}
 				if (type === 'remove') {
@@ -1292,13 +1331,13 @@ client.on('ready', async () => {
 						if (role !== null && role !== undefined) {
 							await role.delete();
 							deleteStat(member, "colourRole");
-							reply(interaction, 'Deleted your colour role...', convertBitsToBitField(6));
+							reply(interaction, 'Deleted your colour role...', "reply", true);
 							break;
 						}
-						reply(interaction, `You have a colour role... but it's invalid`, convertBitsToBitField(6));
+						reply(interaction, `You have a colour role... but it's invalid`, "reply", true);
 						break;
 					}
-					reply(interaction, `You currently don't have a colour role...`, convertBitsToBitField(6));
+					reply(interaction, `You currently don't have a colour role...`, "reply", true);
 				}
 				break;
 			// END COLOURROLE COMMAND
@@ -1308,12 +1347,12 @@ client.on('ready', async () => {
 			 */
 			case 'ban':
 				if (!member.hasPermission("BAN_MEMBERS")) {
-					reply(interaction, permissionMessage, convertBitsToBitField(6));
+					reply(interaction, permissionMessage, "reply", true);
 					break;
 				}
 
 				var targetMember = await returnCatch(guild.members.fetch(args.member), () => {
-					reply(interaction, `That's not a valid member!`, convertBitsToBitField(6));
+					reply(interaction, `That's not a valid member!`, "reply", true);
 				});
 				if (!targetMember) {
 					break;
@@ -1324,7 +1363,7 @@ client.on('ready', async () => {
 				var details = await getPunishmentDetails(args.timespan);
 				if (details) {
 					if (!details) {
-						reply(interaction, `That's not a valid timespan (where [x] is any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid timespan (where [x] is any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, "reply", true);
 						break;
 					}
 					_.set(discord.guilds, `${guild_id}.members.${target.id}.banned`, {
@@ -1353,7 +1392,7 @@ client.on('ready', async () => {
 							{ name: 'Reason', value: reason }
 						)
 						.setFooter(`Banned by ${user.tag}`, user.avatarURL())
-				, convertBitsToBitField(6))
+				, "reply", true)
 				break;
 			case 'mute':
 				var hasRoles =
@@ -1361,7 +1400,7 @@ client.on('ready', async () => {
 					roles.get('854842705363992586')
 				);
 				if (!hasRoles && !member.hasPermission("MANAGE_ROLES")) {
-					reply(interaction, permissionMessage, convertBitsToBitField(6));
+					reply(interaction, permissionMessage, "reply", true);
 					break;
 				}
 
@@ -1371,7 +1410,7 @@ client.on('ready', async () => {
 				if (args.timespan) {
 					var details = await getPunishmentDetails(args.timespan);
 					if (!details) {
-						reply(interaction, `That's not a valid timespan (let [x] be any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid timespan (let [x] be any number: [x]s, [x]m, [x]h, [x]d, [x]y)!`, "reply", true);
 						break;
 					}
 					setStat(targetMember, "banDate", now);
@@ -1393,7 +1432,7 @@ client.on('ready', async () => {
 							{ name: 'Reason', value: reason }
 						)
 						.setFooter(`Banned by ${user.tag}`, user.avatarURL())
-				, convertBitsToBitField(6))
+				, "reply", true)
 				break;
 
 			/*
@@ -1433,50 +1472,31 @@ client.on('ready', async () => {
 							)
 							.setFooter(`Requested by ${user.tag}`, user.avatarURL());
 							
-						reply(interaction, embed, convertBitsToBitField(6));
+						reply(interaction, embed, "reply", true);
 						break;
 					}
 					
 					const date = Date.parse(time);
 					if (!date) {
-						reply(interaction, `That's not a valid date!`, convertBitsToBitField(6));
+						reply(interaction, `That's not a valid date!`, "reply", true);
 						break;
 					}
 				}
 
-				reply(interaction, 'yolo', convertBitsToBitField(6));
+				reply(interaction, 'yolo', "reply", true);
 				break;
 
 			case 'test':
-				reply(interaction, 'hello', convertBitsToBitField(4, 7));
+				deferReply(interaction);
 				setTimeout(function() {
-					reply(interaction, ':O', convertBitsToBitField(4), "EDIT_INITIAL");
+					reply(interaction, ':O', "editReply");
 				}, 5000);
 				break;
 
 			default:
-				reply(interaction, 'nani', convertBitsToBitField(6));
+				reply(interaction, 'nani', "reply", true);
 		}
-	});
-	client.on('raw', async (packet) => {
-		if ([ 'MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE' ].includes(packet.t)) {
-			const channel = client.channels.cache.get(packet.d.channel_id);
-			if (channel.messages.cache.get(packet.d.message_id)) { return };
-			channel.messages.fetch(packet.d.message_id).then((message) => {
-				const emoji = packet.d.emoji.id || packet.d.emoji.name;
-				const reaction = message.reactions.cache.get(emoji);
-				if (packet.t === 'MESSAGE_REACTION_ADD') {
-					client.emit('messageReactionAdd', reaction, client.users.cache.get(packet.d.user_id));
-				}
-				else {
-					client.emit('messageReactionRemove', reaction, client.users.cache.get(packet.d.user_id));
-				}
-			})
-				.catch(console.error);
-		}
-	});
-
-	setInterval(reloadDiscordJSON, 1000);
+	}
 });
 
 client.on('message', (message) => {
@@ -1489,13 +1509,7 @@ client.on('message', (message) => {
 	var lower = content.toLowerCase();
 	
 	if (member.hasPermission("ADMINISTRATOR")) {
-		if (lower === '!registercommands') {
-			registerCommands(guild.id);
-		}
-		else if (lower === `!delete the kool commands ${member.id}`) {
-			deleteCommands(guild.id);
-		}
-		else if (lower.includes('!eval')) {
+		if (lower.includes('!eval')) {
 			try {
 				const result = eval(`(async () => { ${content.substr(6, lower.length)} })();`)
 				    .then((result) => {
@@ -1526,7 +1540,7 @@ client.on('messageUpdate', async (oldMessage, newMessage) => {
 	var guild = newMessage.guild;
 	var channel = newMessage.channel;
 	/** @type {Discord.TextChannel} **/
-	var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
+	var logs = guild.channels.cache.get(discord.guilds?.[guild.id].message_logs);
 	if (logs) {
 		var description = `📎 **${user} edited [a message](https://discord.com/channels/${guild.id}/${channel.id}/${newMessage.id}) in ${channel}.**`;
 		var descLength = description.length - 2;
@@ -1553,7 +1567,7 @@ client.on('messageDelete', async (message) => {
 	/** @type {string} **/
 	var content = message.content;
 	/** @type {Discord.TextChannel} **/
-	var logs = guild.channels.cache.get(_.get(discord.guilds, `${guild.id}.message_logs`));
+	var logs = guild.channels.cache.get(discord.guilds?.[guild.id].message_logs);
 	if (logs) {
 		var description = `📎 **A message sent by ${user} was deleted in ${channel} (ID: ${message.id}).**`;
 		var descLength = description.length - 2;
@@ -1722,7 +1736,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 			});
 	}
 
-	const reactionRole = _.get(discord, `reactionRoleMessages.${message.id}`);
+	const reactionRole = discord.reactionRoleMessages?.[message.id];
 	if (reactionRole) {
 		var emoji = reaction._emoji;
 		var reactionRoleEmote = reactionRole.emotes[emoji.name] || reactionRole.emotes[emoji.id];
@@ -1737,7 +1751,7 @@ client.on('messageReactionRemove', async (reaction, user) => {
 	const guild = message.guild;
 	var member = guild.member(user);
 
-	const reactionRole = _.get(discord, `reactionRoleMessages.${message.id}`);;
+	const reactionRole = discord.reactionRoleMessages?.[message.id];
 	if (reactionRole) {
 		var emoji = reaction._emoji;
 		var reactionRoleEmote = reactionRole.emotes[emoji.name] || reactionRole.emotes[emoji.id];
@@ -1776,7 +1790,7 @@ function deleteStat(member, key) {
  * Get a stat of a member in a guild.
  *
  * @param {Discord.GuildMember} member The desired member of the stat.
- * @param {String} key The key of the desired stat.
+ * @param {string} key The key of the desired stat.
  * @returns The value of the stat specified.
 **/
 function getStat(member, key) {
@@ -1787,15 +1801,15 @@ function getStat(member, key) {
 /**
  * Converts bits to bit field
  * 
- * @param {number[]} bits The bits of the bit field
- * @returns {number} The bit field of the bits
+ * @param {number[]} bits The bits of the bit field.
+ * @returns {number} The bit field of the bits.
  * 
  * @example
- * var ephemeralAndLoading = convertBitsToBitField(6, 7);
+ * var ephemeralAndLoading = convertBitsToBitField(6, 7); // 192
 **/
 function convertBitsToBitField(...bits) {
 	var bitField = 0;
-	for (var bit of bits) {
+	for (let bit of bits) {
 		bitField += Math.pow(2, bit);
 	}
 	return bitField;
@@ -1804,158 +1818,52 @@ function convertBitsToBitField(...bits) {
 /**
  * Converts bit field to bits
  * 
- * @param {number} bitField The bit field
- * @returns {number[]} The bits of the bit field
+ * @param {number} bitField The bit field.
+ * @returns {number[]} The bits of the bit field.
  * 
  * @example
  * var ephemeralAndLoading = convertBitFieldToBits(192); // [ 6, 7 ]
 **/
 function convertBitFieldToBits(bitField) {
 	const bits = [];
-	for (var bit = 0; bit < 8; bit++) {
-		if (bitField & Math.pow(2, bit)) { bits.push(bit); }
+	for (let bit = 0; bit < 8; bit++) {
+		if (bitField & Math.pow(2, bit)) { bits = [ ...bits, bit ]; }
 	}
 	return bits;
 }
 
 /**
- * Reply to a Discord interaction.
- *
- * @param {Object} interaction The interaction you want to reply to.
- * @param {(string | Discord.MessageEmbed)} response The message you want to respond with.
- * @param flags The flags of the message (https://discord.com/developers/docs/resources/channel#message-object-message-flags)
+ * Responds to a slash command interaction.
  * 
- * CROSSPOSTED	1 << 0	this message has been published to subscribed channels (via Channel Following)
+ * @param {Discord.Interaction} interaction The interaction to respond to
+ * @param {(string | Discord.MessageEmbed)} content The content of the response
+ * @param {("reply" | "editReply" | "followUp")} type The response type. `"reply"` replies normally, `"editReply"` edits the initial reply, and `"followUp"` sends a follow up message.
+ * @param isEphemeral Whether or not the response is ephemeral
+ * @returns The response message
  * 
- * IS_CROSSPOST	1 << 1	this message originated from a message in another channel (via Channel Following)
- * 
- * SUPPRESS_EMBEDS	1 << 2	do not include any embeds when serializing this message
- * 
- * SOURCE_MESSAGE_DELETED	1 << 3	the source message for this crosspost has been deleted (via Channel Following)
- * 
- * URGENT	1 << 4	this message came from the urgent message system
- * 
- * HAS_THREAD	1 << 5	this message has an associated thread, with the same id as the message
- * 
- * EPHEMERAL	1 << 6	this message is only visible to the user who invoked the Interaction
- * 
- * LOADING	1 << 7	this message is an Interaction Response and the bot is "thinking"
- * 
- * @param {("EDIT_INITIAL" | "DELETE_INTIAL" | "FOLLOW_UP" | "EDIT_SENT" | "SEND")} type The type of Interaction Response.
- * @param deletable Whether or not the reply should be deletable by the user
+ * @example
+ * reply(interaction, "Wait 10 seconds!");
+ * await sleep(5000);
+ * reply(interaction, "Wait 5 more seconds...", "editReply");
+ * await sleep(5000);
+ * reply(interaction, "You waited 10 seconds!", "followUp");
 **/
-async function reply(interaction, response, flags = 0, type = "SEND", deletable = true) {	
-	if (!["EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"].includes(type)) { throw new Error(`${type} is not a valid response type`); }
+function reply(interaction, content, type = "reply", isEphemeral = false) {
+	return interaction[type]({ content: content, ephemeral: isEphemeral });
+}
 
-	var data = (typeof response === 'object') ? await createAPIMessage(interaction, response) : { content: response }
-	data.flags = flags;
-	const responseData = { data: data };
-
-	const flagsField = convertBitFieldToBits(flags);
-
-	switch(type) { // "EDIT_INITIAL", "DELETE_INTIAL", "FOLLOW_UP", "EDIT_SENT", "SEND"
-		case "EDIT_INITIAL":
-			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages("@original").patch(responseData);
-			break;
-
-		case "DELETE_INTIAL":
-			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages("@original").delete();
-			break;
-
-		case "FOLLOW_UP":
-			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).post(responseData);
-			break;
-
-		case "EDIT_SENT":
-			var responseMessage = await client.api.webhooks(client.user.id, interaction.token).messages(interaction.id).patch(responseData);
-			break;
-
-		case "SEND":
-			if (flagsField.includes(7)) {
-				data = { flags: flags };
-				deletable = false;
-				var responseType = 5;
-			}
-			else {
-				var responseType = 4;
-			}
-			var responseMessage = await client.api.interactions(interaction.id, interaction.token).callback.post(
-			{
-				data: {
-					type: responseType,
-					data
-				}
-			});
-			break;
-
-		default:
-			throw new Error(`${type} is not a valid Interaction Response type`);
-	}
-	if (flagsField.includes(6) || type === "SEND") { deletable = false; }
-	if (deletable) {
-		/**
-		 * The ID of the guild of the interaction
-		 * @type {Discord.Snowflake}
-		**/
-		const guild_id = interaction.guild_id;
-		/**
-		 * The guild of the interaction
-		 * @type {Discord.Guild}
-		**/
-		const guild = client.guilds.cache.get(guild_id);
-
-		/**
-		 * The ID of the channel of the interaction
-		 * @type {Discord.Snowflake}
-		**/
-		const channel_id = interaction.channel_id;
-		/**
-		 * The channel of the interaction
-		 * @type {Discord.TextChannel}
-		**/
-		const channel = guild.channels.cache.get(channel_id);
-
-		/**
-		 * The ID of the user who created the interaction
-		 * @type {Discord.Snowflake}
-		**/
-		const user_id = interaction.member.user.id;
-		/**
-		 * The user who created the interaction
-		 * @type {Discord.User}
-		**/
-		const user = client.users.cache.get(user_id);
-
-		/**
-		 * The ID of the response message sent for the
-		 * @type {Discord.Snowflake}
-		**/
-		const message_id = responseMessage.id;
-		/**
-		 * The response message sent for the interaction
-		**/
-		const message = await channel.messages.fetch(message_id, true, true);
-
-		await message.react('❌');
-		
-		setMetadata(message, 'user', user.id, 3600000);
-	}
+function deleteReply(interaction) {
+	return interaction.deleteReply();
 }
 
 /**
- * Create an API message for the specified interaction with the specified content
  * 
- * @param interaction The desired interaction for the API message
- * @param {(string | Discord.MessageEmbed) | (string | Discord.MessageEmbed)[]} content The content of the message
+ * @param {Discord.Interaction} interaction The interaction to defer the respond of
+ * @param isEphemeral Whether or not the deference is ephemeral
+ * @returns 
 **/
-async function createAPIMessage(interaction, content) {
-	const { data, files } = await Discord.APIMessage.create(
-		client.channels.resolve(interaction.channel_id),
-		content
-	)
-		.resolveData()
-		.resolveFiles();
-	return { ...data, files };
+function deferReply(interaction, isEphemeral = false) {
+	return interaction.deferReply({ ephemeral: isEphemeral });
 }
 
 function clearEmpties(object) {
@@ -1972,10 +1880,10 @@ async function reloadDiscordJSON() {
 		var guildData = discord.guilds[guildId];
 		/** @type {Discord.Guild} **/
 		var guild = client.guilds.cache.get(guildId);
-		var bans = await client.guilds.cache.get(guildId).fetchBans();
+		var bans = await client.guilds.cache.get(guildId).bans.fetch();
 		for (const banInfo of bans) {
 			var userId = banInfo[1].user.id;
-			var banned = _.get(guildData, `members.${userId}.banned`);
+			var banned = guildData.members?.[userId]?.banned;
 			if (banned) {
 				var banTime = banned.banTime;
 				var banDate = banned.banDate;
@@ -2003,4 +1911,4 @@ async function reloadDiscordJSON() {
 client.on('rateLimit', (...args) => console.log('rateLimit', ...args));
 client.on('debug', console.debug);*/
 client.login(process.env.TOKEN);
-console.log('started log in procedure')
+console.log('started log in procedure');
