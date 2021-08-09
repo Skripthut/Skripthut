@@ -1,17 +1,18 @@
 {
     "name": "addon",
     "description": "Get information about an addon or lst all supported addons",
-    "type": 1,
     "options": [
         {
-            "type": 3,
+            "type": "STRING",
             "name": "name",
-            "description": "The partial name of the addon to search for (leave blank for list of all supported addons [WIP])"
+            "description": "The partial name of the addon to search for (leave blank for list of all supported addons [WIP])",
+            "required": false
         },
         {
-            "type": 3,
+            "type": "STRING",
             "name": "api",
             "description": "Which docs API to use (defaults to SkriptTools)",
+            "required": false,
             "choices": [
                 {
                     "name": "SkriptTools Addons",

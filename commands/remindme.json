@@ -1,15 +1,14 @@
 {
     "name": "remindme",
     "description": "Send a reminder at a certain date or after a certain timespan",
-    "type": 1,
     "options": [
         {
-            "type": 1,
+            "type": "SUB_COMMAND",
             "name": "in",
             "description": "Send the reminder after a certain timespan",
             "options": [
                 {
-                    "type": 3,
+                    "type": "STRING",
                     "name": "timespan",
                     "description": "How long later to send the reminder",
                     "required": true
@@ -17,12 +16,12 @@
             ]
         },
         {
-            "type": 1,
+            "type": "SUB_COMMAND",
             "name": "at",
             "description": "Send the reminder at a certain date",
             "options": [
                 {
-                    "type": 3,
+                    "type": "STRING",
                     "name": "date",
                     "description": "A date (type \"help\" for date format)",
                     "required": true

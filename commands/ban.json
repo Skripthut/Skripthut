@@ -1,28 +1,30 @@
 {
     "name": "ban",
     "description": "Ban a member from the server",
-    "type": 1,
     "options": [
         {
-            "type": 6,
+            "type": "USER",
             "name": "member",
             "description": "The member you want to ban",
             "required": true
         },
         {
-            "type": 3,
+            "type": "STRING",
             "name": "timespan",
-            "description": "The optional timespan to ban them for (let [x] be any number: [x]s, [x]m, [x]h, [x]d, [x]y)"
+            "description": "The optional timespan to ban them for (let [x] be any number: [x]s, [x]m, [x]h, [x]d, [x]y)",
+            "required": false
         },
         {
-            "type": 3,
+            "type": "STRING",
             "name": "reason",
-            "description": "The reason why the member is being banned (defaults to \"Not kool enough to stay in Skripthut\")"
+            "description": "The reason why the member is being banned (defaults to \"Not kool enough to stay in Skripthut\")",
+            "required": false
         },
         {
-            "type": 4,
+            "type": "INTEGER",
             "name": "messages",
             "description": "The amount of days ago to delete their messages",
+            "required": false,
             "choices": [
                 {
                     "name": "1",
