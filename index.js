@@ -8,7 +8,7 @@ Object.defineProperty(Object.prototype, '_object', { get: function() { return th
  * @param {number} argument The argument of the logarithm
  * @param base The base of the logarithm
 **/
-const log = (argument, base = Math.E) => (base === Math.E) ? Math.log(argument) : Math.log(argument) / Math.log(base)
+const log = (argument, base = Math.E) => (base === Math.E) ? Math.log(argument) : Math.log(argument) / Math.log(base);
 
 /**
  * Returns a number limited between the specified minimum and maximum.
