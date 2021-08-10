@@ -1347,11 +1347,7 @@ client.on('interactionCreate', async (interaction) => {
 
 				var reason = args.reason || "Not kool enough to stay in Skripthut";
 				
-				target.send('u ban lmao')
-					.then((message) => {
-						console.log(message);
-					})
-					.catch(() => {});
+				returnCatch(target.send('u ban lmao'));
 				targetMember.ban({ reason: reason });
 				reply(interaction,
 					new Discord.MessageEmbed()
