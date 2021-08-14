@@ -1,4 +1,5 @@
 **/database
 **/node_modules
 **/secrets
+**/nvm
 .replit
