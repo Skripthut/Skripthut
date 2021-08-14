@@ -22,6 +22,6 @@ archive.on('error', function(err){
 archive.pipe(output);
 
 // append files from a sub-directory, putting its contents at the root of archive
-archive.directory(`${process.cwd()}/test`, false);
+archive.directory(`${process.cwd()}/commands`, false);
 
 archive.finalize();
