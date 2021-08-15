@@ -454,7 +454,6 @@ client.on('ready', async () => {
 
 	console.log('registering events...');
 	for (const [ key, value ] of Object.entries(events)) {
-		console.log(`event: ${key}, callback: ${value.toString()}`);
 		client.on(key, value);
 	}
 
