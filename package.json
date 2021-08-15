@@ -4,7 +4,7 @@
   "description": "kool package",
   "main": "index.js",
   "scripts": {
-    "run": "node index.js"
+    "start": "bash start.sh"
   },
   "keywords": [],
   "author": "",
