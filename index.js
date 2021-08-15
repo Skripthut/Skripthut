@@ -534,7 +534,7 @@ process.on('exit', (code) => {
 	console.log('Exiting...');
 	clearEmpties(discord);
 	fs.writeJSONSync('./database/discord.json', discord, { spaces: '\t' });
-	console.log('Cached discord.json!');
+	console.log('Saved discord.json!');
 });
 
 /*console.log('proceeding to log in', process.env.TOKEN);
