@@ -83,8 +83,7 @@ const intentLength = Object.keys(Discord.Intents.FLAGS).length;
 for (let i = 0; i <= intentLength; i++) { intentsField += 1 << i; }
 
 const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /* All Intents */ });
-
-returnCatch(fs.readJSON('./database/discord.json'), () => { fs.writeJSON('./database/discord.json', {}); }).then((/** The main Skripthut database **/ discord) => { global.discord = discord });
+global.discord = fs.readJSONSync('./database/discord.json');
 
 const metadata = {};
 /**
