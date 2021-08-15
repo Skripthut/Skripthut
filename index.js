@@ -451,11 +451,13 @@ client.on('ready', async () => {
 				.catch(console.error);
 		}
 	});
-
+	
 	console.log('registering events...');
 	for (const [ key, value ] of Object.entries(events)) {
+		console.log(key);
 		client.on(key, value);
 	}
+	console.log('registered!')
 
 	setInterval(reloadDiscordJSON, 1000);
 });
