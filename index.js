@@ -436,10 +436,11 @@ client.on('ready', async () => {
 
 	client.on('raw', async (packet) => {
 		if ([ 'MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE' ].includes(packet.t)) {
-			const channel = client.channels.cache.get(packet.d.channelId);
-			if (channel.messages.cache.get(packet.d.messageId)) { return };
-			channel.messages.fetch(packet.d.messageId).then((message) => {
-				const emoji = packet.d.emoji.id || packet.d.emoji.name;
+			console.log('packet.d', packet.d);
+			const channel = client.channels.cache.get(packet.d.channel_id);
+			if (channel.messages.cache.get(packet.d.message_id)) { return };
+			channel.messages.fetch(packet.d.message_id).then((message) => {
+				const emoji = packet.d.emoji.id ?? packet.d.emoji.name;
 				const reaction = message.reactions.cache.get(emoji);
 				if (packet.t === 'MESSAGE_REACTION_ADD') {
 					client.emit('messageReactionAdd', reaction, client.users.cache.get(packet.d.userId));
@@ -574,13 +575,13 @@ async function reloadDiscordJSON() {
 		clearEmpties(metadata);
 	})();
 
-	fs.writeJSON('./database/discord.json', discord);
+	fs.writeJSON('./database/discord.json', discord, { spaces: '\t' });
 }
 
 process.on('exit', (code) => {
 	console.log('Exiting...');
 	clearEmpties(discord);
-	fs.writeJSONSync('./database/discord.json', discord);
+	fs.writeJSONSync('./database/discord.json', discord, { spaces: '\t' });
 	console.log('Cached discord.json!');
 });
 
