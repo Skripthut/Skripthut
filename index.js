@@ -560,7 +560,7 @@ async function reloadDiscordJSON() {
 				var banDate = banned.banDate;
 				var moderator = client.users.cache.get(banned.moderator);
 				if (banDate + banTime <= now) {
-					await await guild.members.fetchs.unban(userId, `Temporary ban ran out (${moderator.tag})`);
+					await guild.members.unban(userId, `Temporary ban ran out (${moderator.tag})`);
 					delete discord.guilds[guildId].members[userId].banned;
 				}
 			}
