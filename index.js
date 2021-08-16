@@ -454,41 +454,6 @@ client.on('guildBanRemove', async (ban) => {
 	_.unset(discord.guilds, `${guild.id}.members.${user.id}.banned`);
 });
 
-/**
- * Set a stat of a member in a guild.
- *
- * @param {Discord.GuildMember} member The desired member of the stat
- * @param {string} key The key of the desired stat to set
- * @param value The value to set the stat to
-**/
-function setStat(member, key, value) {
-	const guild = member.guild;
-	_.set(discord.guilds, `${guild.id}.members.${member.id}.${key}`, value);
-}
-
-/**
- * Delete a stat of a member in a guild.
- *
- * @param {Discord.GuildMember} member The desired member of the stat
- * @param {String} key The key of the desired stat to delete
-**/
-function deleteStat(member, key) {
-	const guild = member.guild;
-	_.unset(discord.guilds, `${guild.id}.members.${member.id}.${key}`);
-}
-
-/**
- * Get a stat of a member in a guild.
- *
- * @param {Discord.GuildMember} member The desired member of the stat.
- * @param {string} key The key of the desired stat.
- * @returns The value of the stat specified.
-**/
-function getStat(member, key) {
-	const guild = member.guild;
-	return _.get(discord.guilds, `${guild.id}.members.${member.id}.${key}`);
-}
-
 function clearEmpties(object) {
 	for (var key in object) {
 		if (!object[key] || typeof object[key] !== "object") { continue; }
