@@ -19,7 +19,7 @@ const log = (argument, base = Math.E) => (base === Math.E) ? Math.log(argument) 
 **/
 const limit = (number, min, max) => Math.max(Math.min(number, max), min);
 
-const shuffle = require(`./lib/events/methods/shuffle.js`);
+const shuffle = require(`./lib/methods/shuffle.js`);
 
 console.log(shuffle([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ]));
 
