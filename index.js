@@ -19,49 +19,7 @@ const log = (argument, base = Math.E) => (base === Math.E) ? Math.log(argument) 
 **/
 const limit = (number, min, max) => Math.max(Math.min(number, max), min);
 
-/**
- * Format a number of bytes to KiB, MiB, GiB, TiB, etc.
- * 
- * @param {number} bytes The number of bytes to format
- * @param decimals The decimal precision of the formatted string (2 = 0.01, 3 = 0.001)
-**/
-function formatBytes(bytes, decimals = 2) {
-	if (bytes <= 0) { return '0 Bytes'; }
-
-	const k = 1024;
-	const dm = Math.max(0, decimals);
-	const sizes = [ 'Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB' ];
-
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-	return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
-
-/**
- * Sleeps for a certain amount of time (specified in milliseconds)
- * 
- * @param {number} ms The amount of milliseconds to wait before continuing
- * @returns {Promise<void>} Returns a promise which resolves after `ms` milliseconds.
-**/
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-/**
- * Returns a shuffled copy of the specified array using the Fisher-Yates Shuffle. Please advise from using this with massive arrays, since this can produce lag.
- * 
- * @template {Array} T
- * @param {T} array The array to shuffle
- * @returns {T} Returns a shuffled copy of `array`
-**/
-function shuffle(array) {
-	if (!array instanceof Array) { return null; }
-	var length = array.length;
-	var copy = [ ...array ];
-	for (let i = length - 1; i > 0; i--) {
-		const j = Math.floor(Math.random() * (i + 1));
-		[ copy[i], copy[j] ] = [ copy[j], copy[i] ];
-	}
-	return copy;
-}
+const shuffle = require(`./lib/events/methods/shuffle.js`);
 
 console.log(shuffle([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ]));
 
@@ -160,6 +118,7 @@ function getApp(guildId) {
  * @returns Returns once all commands are deleted.
 **/
 async function deleteCommands(guildId) {
+	console.log('deleting commands...')
 	const commands = getApp(guildId).commands;
 	const awaitCommands = await commands.get();
 	for (const command of awaitCommands) {
@@ -167,7 +126,7 @@ async function deleteCommands(guildId) {
 		var deleteCommand = getApp(guildId).commands(command.id);
 		await deleteCommand.delete();
 	}
-	console.log('deleted');
+	console.log('deleted all commands!');
 	return true;
 }
 /**
@@ -179,7 +138,7 @@ async function deleteCommands(guildId) {
  * @returns Returns once all commands are registered.
 **/
 async function registerCommands(guild, ignoreSame = true, fixJSON = true, deleteUnset = true) {
-	console.log('registering');
+	console.log('registering commands...', ignoreSame, fixJSON, deleteUnset);
 	if (!client.application?.owner) { await client.application?.fetch(); }
 	
 	const appCommands = guild.commands;
@@ -198,7 +157,7 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 		if (Object.keys(registeredCommands)) {
 			var entries = Object.entries(registeredCommands).filter(() => true);
 			var isCommandSet = function(command) {
-				for (var i = entries.length - 1; i > -1; i--) {
+				for (let i = entries.length - 1; i > -1; i--) {
 			   		const entry = entries[i];
 					if (JSON.stringify(command) === JSON.stringify(entry[1])) {
 						entries.splice(i, 1);
@@ -217,7 +176,7 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 		for (const command of localCommands) {
 			const commandData = fs.readJSONSync(`./commands/${command}`);
 			commands = [ ...commands, commandData ];
-			commandNames = [ ...commandNames, commandData.name ];
+			commandNames[command.substr(0, (command.length - 4))] = commandData.name;
 		}
 	});
 	
@@ -234,7 +193,9 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 	
 	if ((fixJSON || deleteUnset) && entries.length) {
 		let newAppCommandsArray = await appCommands.fetch();
+		console.log(newAppCommandsArray);
 		if (deleteUnset) {
+			console.log(`deleting unset commands...`);
 			for (let i = newAppCommandsArray.length - 1; i > -1; i--) {
 				const command = newAppCommandsArray[i];
 				const name = command.name;
@@ -244,9 +205,11 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 					newAppCommandsArray.splice(i, 1);
 				}
 			}
+			console.log(`deleted all unset commands!`);
 		}
-		
+
 		if (fixJSON) {
+			console.log(`fixing command json...`);
 			let newAppCommandsDataArray = JSON.parse(JSON.stringify(newAppCommandsArray));
 			for (const newCommand of newAppCommandsDataArray) {
 				dynamicProperties.forEach((key) => delete newCommand[key]);
@@ -266,8 +229,10 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 				var name = value.name;
 				fixCommandJSON(name);
 			}
+			console.log(`fixed all command json!`);
 		}
 	}
+	console.log(`registered all commands!`);
 	return true;
 }
 
