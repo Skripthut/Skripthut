@@ -41,7 +41,7 @@ const intentLength = Object.keys(Discord.Intents.FLAGS).length;
 for (let i = 0; i <= intentLength; i++) { intentsField += 1 << i; }
 
 const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /* All Intents */ });
-global.discord = fs.readJSONSync('./database/discord.json');
+global.database = fs.readJSONSync('./database/discord.json');
 
 global.metadata = {};
 
@@ -55,7 +55,7 @@ global.metadata = {};
 **/
 function setPersistent(object, tag, value) {
 	if (!object.id) { return; }
-	return _.set(discord, `persistentValues.${object.constructor.name}.${object.id}.${tag}`, value);
+	return _.set(database, `persistentValues.${object.constructor.name}.${object.id}.${tag}`, value);
 }
 
 /**
@@ -67,7 +67,7 @@ function setPersistent(object, tag, value) {
 **/
 function getPersistent(object, tag) {
 	if (!object.id) { return; }
-	return _.get(discord, `persistentValues.${object.constructor.name}.${object.id}.${tag}`);
+	return _.get(database, `persistentValues.${object.constructor.name}.${object.id}.${tag}`);
 }
 
 /**
@@ -79,7 +79,7 @@ function getPersistent(object, tag) {
 **/
 function deletePersistent(object, tag) {
 	if (!object.id) { return; }
-	return _.unset(discord, `persistentValues.${object.constructor.name}.${object.id}.${tag}`);
+	return _.unset(database, `persistentValues.${object.constructor.name}.${object.id}.${tag}`);
 }
 
 /**
@@ -188,7 +188,7 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 
 		console.log(`register ${command.name}`);
 		await appCommands.create(command);
-		discord.totalRegisteredCommands++;
+		database.totalRegisteredCommands++;
 	}
 	
 	if ((fixJSON || deleteUnset) && entries.length) {
@@ -402,13 +402,13 @@ function getRandomInt(min, max) {
 }
 
 var now = (new Date).toISOString().substr(0, 10);
-if (discord.lastActivation !== now) {
-	discord.activations = 0;
+if (database.lastActivation !== now) {
+	database.activations = 0;
 }
-discord.lastActivation = now;
-discord.activations++;
+database.lastActivation = now;
+database.activations++;
 
-/*var access = fs.createWriteStream(`./logs/${now}**${discord.activations}.stdout`);
+/*var access = fs.createWriteStream(`./logs/${now}**${database.activations}.stdout`);
 process.stdout.write = process.stderr.write = access.write.bind(access);
 
 process.on('uncaughtException', function(err) {
@@ -416,7 +416,7 @@ process.on('uncaughtException', function(err) {
 });*/
 
 client.on('guildBanRemove', async (ban) => {
-	_.unset(discord.guilds, `${guild.id}.members.${user.id}.banned`);
+	_.unset(database.guilds, `${guild.id}.members.${user.id}.banned`);
 });
 
 function clearEmpties(object) {
@@ -429,8 +429,8 @@ function clearEmpties(object) {
 
 async function reloadDiscordJSON() {
 	var now = Date.now();
-	Object.keys(discord.guilds).forEach(async (guildId) => {
-		var guildData = discord.guilds[guildId];
+	Object.keys(database.guilds).forEach(async (guildId) => {
+		var guildData = database.guilds[guildId];
 		/** @type {Discord.Guild} **/
 		var guild = client.guilds.cache.get(guildId);
 		var bans = await client.guilds.cache.get(guildId).bans.fetch();
@@ -443,27 +443,27 @@ async function reloadDiscordJSON() {
 				var moderator = client.users.cache.get(banned.moderator);
 				if (banDate + banTime <= now) {
 					await guild.members.unban(userId, `Temporary ban ran out (${moderator.tag})`);
-					delete discord.guilds[guildId].members[userId].banned;
+					delete database.guilds[guildId].members[userId].banned;
 				}
 			}
 		}
 	});
 
 	(/**
-	 * Clears all empties in `discord` and `metadata` objects asynchronously.
+	 * Clears all empties in `database` and `metadata` objects asynchronously.
 	**/
 	async function() {
-		clearEmpties(discord);
+		clearEmpties(database);
 		clearEmpties(metadata);
 	})();
 
-	fs.writeJSON('./database/discord.json', discord, { spaces: '\t' });
+	fs.writeJSON('./database/discord.json', database, { spaces: '\t' });
 }
 
 process.on('exit', (code) => {
 	console.log('Exiting...');
-	clearEmpties(discord);
-	fs.writeJSONSync('./database/discord.json', discord, { spaces: '\t' });
+	clearEmpties(database);
+	fs.writeJSONSync('./database/discord.json', database, { spaces: '\t' });
 	console.log('Saved discord.json!');
 });
 
