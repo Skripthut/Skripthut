@@ -2,36 +2,36 @@
     "name": "joinmessages",
     "description": "General join messages moderation of the server",
     "options": [
-      {
-        "type": 1,
-        "name": "add",
-        "description": "Add messages to the server's join messages (separate by \"|\")",
-        "options": [
-          {
-            "type": 3,
-            "name": "message",
-            "description": "The message to add"
-          }
-        ]
-      },
-      {
-        "type": 1,
-        "name": "remove",
-        "description": "Remove a join message using ID",
-        "options": [
-          {
-            "type": 4,
-            "name": "id",
-            "description": "The ID of the join message (use ID, execute \"/joinmessages\" to see ID's)"
-          }
-        ]
-      },
-      {
-        "type": 1,
-        "name": "list",
-        "description": "List all server's join messages",
-        "options": []
-      }
+        {
+            "type": "SUB_COMMAND",
+            "name": "add",
+            "description": "Add messages to the server's join messages (separate by \"|\")",
+            "options": [
+                {
+                    "type": "STRING",
+                    "name": "message",
+                    "description": "The message to add",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "type": "SUB_COMMAND",
+            "name": "remove",
+            "description": "Remove a join message using ID",
+            "options": [
+                {
+                    "type": "INTEGER",
+                    "name": "id",
+                    "description": "The ID of the join message (use ID, execute \"/joinmessages\" to see ID's)",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "type": "SUB_COMMAND",
+            "name": "list",
+            "description": "List all server's join messages"
+        }
     ]
-  }
-  
+}
