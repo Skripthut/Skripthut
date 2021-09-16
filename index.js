@@ -31,14 +31,8 @@ const axios = require(`axios`);
  * @module Discord
 **/
 const Discord = require(`discord.js`);
-const events = require(`./lib/events.js`);
-
 const fs = require(`fs-extra`);
 global._ = require(`lodash`);
-
-var intentsField = 0;
-const intentLength = Object.keys(Discord.Intents.FLAGS).length;
-for (let i = 0; i <= intentLength; i++) { intentsField += 1 << i; }
 
 const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /* All Intents */ });
 global.client = client;
@@ -49,8 +43,14 @@ global.database = database;
 const metadata = {};
 global.metadata = metadata;
 
+const events = require(`./lib/events.js`);
+
+var intentsField = 0;
+const intentLength = Object.keys(Discord.Intents.FLAGS).length;
+for (let i = 0; i <= intentLength; i++) { intentsField += 1 << i; }
+
 const Color = require(`./lib/constants/Color.js`);
-const { guild } = require(`../constants/General.js`);
+const { guild } = require(`./lib/constants/General.js`);
 
 /**
  * Gets the application of the Discord client in a specific guild.
