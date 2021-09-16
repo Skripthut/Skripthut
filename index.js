@@ -281,25 +281,16 @@ const isEmpty = (string) => (string === undefined || string === '');
 **/
 const getCodeBlock = (string, format = 'vb') => `\`\`\`${format}\n${string}\`\`\``;
 
-var permissionMessage;
-var guildId;
-var guild;
-var skripter;
-var skripthut;
-var tickets;
-
-var SkriptDocs;
-var noResults;
 console.log('hello');
 client.on('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`);
 
-	permissionMessage = `You don't have permission to do this!`;
-	guildId = "854838419677904906";
-	guild = client.guilds.cache.get(guildId);
-	skripter = "860242610613911553";
-	skripthut = "https://i.imgur.com/jumFMJ5.png";
-	tickets = "854954327268786227";
+	global.permissionMessage = `You don't have permission to do this!`;
+	global.guildId = "854838419677904906";
+	global.guild = client.guilds.cache.get(guildId);
+	global.skripter = "860242610613911553";
+	global.skripthut = "https://i.imgur.com/jumFMJ5.png";
+	global.tickets = "854954327268786227";
 
 	SkriptDocs = {
 		SkUnityAPIKey: "58b93076b6269edd",
