@@ -47,7 +47,7 @@ const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /
  * @global
 **/
 var database; // SEES AS MODULE GLOBALLY WITHOUT THIS FOR SOME REASON???
-global.database = fs.readJSONSync('./database/database.json');
+global.database = fs.readJSONSync('./database/main.json');
 
 global.metadata = {};
 
