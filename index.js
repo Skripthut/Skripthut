@@ -42,11 +42,6 @@ for (let i = 0; i <= intentLength; i++) { intentsField += 1 << i; }
 
 const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /* All Intents */ });
 
-/**
- * @type {any} Main Skripthut database
- * @global
-**/
-var database; // SEES AS MODULE GLOBALLY WITHOUT THIS FOR SOME REASON???
 global.database = fs.readJSONSync('./database/main.json');
 
 global.metadata = {};
