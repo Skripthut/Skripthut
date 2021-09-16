@@ -41,10 +41,13 @@ const intentLength = Object.keys(Discord.Intents.FLAGS).length;
 for (let i = 0; i <= intentLength; i++) { intentsField += 1 << i; }
 
 const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /* All Intents */ });
+global.client = client;
 
-global.database = fs.readJSONSync('./database/main.json');
+const database = fs.readJSONSync('./database/main.json');
+global.database = database;
 
-global.metadata = {};
+const metadata = {};
+global.metadata = metadata;
 
 const Color = require(`./lib/constants/Color.js`);
 
