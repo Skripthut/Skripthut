@@ -99,7 +99,7 @@ async function deleteCommands(guildId) {
 	return true;
 }
 /**
- * Register all commands stored in discord.json.
+ * Register all commands stored in main.json.
  *
  * @param {Discord.Guild} guild The guild you want to register the commands onto
  * @param ignoreSame Whether to not register commands that are identical to already registered commands
@@ -427,14 +427,14 @@ async function reloadDiscordJSON() {
 		clearEmpties(metadata);
 	})();
 
-	fs.writeJSON('./database/discord.json', database, { spaces: '\t' });
+	fs.writeJSON('./database/main.json', database, { spaces: '\t' });
 }
 
 process.on('exit', (code) => {
 	console.log('Exiting...');
 	clearEmpties(database);
-	fs.writeJSONSync('./database/discord.json', database, { spaces: '\t' });
-	console.log('Saved discord.json!');
+	fs.writeJSONSync('./database/main.json', database, { spaces: '\t' });
+	console.log('Saved main.json!');
 });
 
 /*console.log('proceeding to log in', process.env.TOKEN);
