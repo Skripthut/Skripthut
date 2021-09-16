@@ -41,46 +41,15 @@ const intentLength = Object.keys(Discord.Intents.FLAGS).length;
 for (let i = 0; i <= intentLength; i++) { intentsField += 1 << i; }
 
 const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /* All Intents */ });
-global.database = fs.readJSONSync('./database/discord.json');
+
+/**
+ * @type {any} Main Skripthut database
+ * @global
+**/
+var database; // SEES AS MODULE GLOBALLY WITHOUT THIS FOR SOME REASON???
+global.database = fs.readJSONSync('./database/database.json');
 
 global.metadata = {};
-
-/**
- * Sets persistent value of an object
- * 
- * @param object The object which persistent value to set (works as long as an id property is set)
- * @param {string} tag The persistent value to set (works recursively)
- * @param value The value to set to
- * @returns Returns the new persistent value object
-**/
-function setPersistent(object, tag, value) {
-	if (!object.id) { return; }
-	return _.set(database, `persistentValues.${object.constructor.name}.${object.id}.${tag}`, value);
-}
-
-/**
- * Gets persistent value of an object
- * 
- * @param object The object which persistent value to get (works as long as an id property is set)
- * @param {string} tag The persistent value to get (works recursively)
- * @returns Returns the persistent value of the object
-**/
-function getPersistent(object, tag) {
-	if (!object.id) { return; }
-	return _.get(database, `persistentValues.${object.constructor.name}.${object.id}.${tag}`);
-}
-
-/**
- * Deletes persistent value of an object
- * 
- * @param object The object which persistent value to delete (works as long as an id property is set)
- * @param {string} tag The persistent value to delete (works recursively)
- * @returns Returns true if the persistent value is deleted, else false
-**/
-function deletePersistent(object, tag) {
-	if (!object.id) { return; }
-	return _.unset(database, `persistentValues.${object.constructor.name}.${object.id}.${tag}`);
-}
 
 /**
  * Color constant for simple colours
@@ -132,10 +101,10 @@ async function deleteCommands(guildId) {
 /**
  * Register all commands stored in discord.json.
  *
- * @param {Discord.Guild} guild The guild you want to register the commands onto.
- * @param ignoreSame If true, do not register commands that are identical to already registered commands.
- * @param deleteUnset If true, delete all commands that have no identical registered commands.
- * @returns Returns once all commands are registered.
+ * @param {Discord.Guild} guild The guild you want to register the commands onto
+ * @param ignoreSame Whether to not register commands that are identical to already registered commands
+ * @param deleteUnset Whether to delete all commands that have no identical registered commands
+ * @returns Returns once all commands are registered
 **/
 async function registerCommands(guild, ignoreSame = true, fixJSON = true, deleteUnset = true) {
 	console.log('registering commands...', ignoreSame, fixJSON, deleteUnset);
@@ -188,7 +157,7 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 
 		console.log(`register ${command.name}`);
 		await appCommands.create(command);
-		database.totalRegisteredCommands++;
+		database.discord.totalRegisteredCommands++;
 	}
 	
 	if ((fixJSON || deleteUnset) && entries.length) {
@@ -401,14 +370,15 @@ function getRandomInt(min, max) {
 	return Math.round(getRandom(min, max));
 }
 
-var now = (new Date).toISOString().substr(0, 10);
-if (database.lastActivation !== now) {
-	database.activations = 0;
+let now = (new Date).toISOString().substr(0, 10);
+if (database.discord.lastActivation !== now) {
+	database.discord.activations = 0;
 }
-database.lastActivation = now;
-database.activations++;
 
-/*var access = fs.createWriteStream(`./logs/${now}**${database.activations}.stdout`);
+database.discord.lastActivation = now;
+database.discord.activations++;
+
+/*var access = fs.createWriteStream(`./logs/${now}**${database.discord.activations}.stdout`);
 process.stdout.write = process.stderr.write = access.write.bind(access);
 
 process.on('uncaughtException', function(err) {
@@ -416,7 +386,7 @@ process.on('uncaughtException', function(err) {
 });*/
 
 client.on('guildBanRemove', async (ban) => {
-	_.unset(database.guilds, `${guild.id}.members.${user.id}.banned`);
+	_.unset(database.discord.guilds, `${guild.id}.members.${user.id}.banned`);
 });
 
 function clearEmpties(object) {
@@ -429,8 +399,8 @@ function clearEmpties(object) {
 
 async function reloadDiscordJSON() {
 	var now = Date.now();
-	Object.keys(database.guilds).forEach(async (guildId) => {
-		var guildData = database.guilds[guildId];
+	Object.keys(database.discord.guilds).forEach(async (guildId) => {
+		var guildData = database.discord.guilds[guildId];
 		/** @type {Discord.Guild} **/
 		var guild = client.guilds.cache.get(guildId);
 		var bans = await client.guilds.cache.get(guildId).bans.fetch();
@@ -443,7 +413,7 @@ async function reloadDiscordJSON() {
 				var moderator = client.users.cache.get(banned.moderator);
 				if (banDate + banTime <= now) {
 					await guild.members.unban(userId, `Temporary ban ran out (${moderator.tag})`);
-					delete database.guilds[guildId].members[userId].banned;
+					delete database.discord.guilds[guildId].members[userId].banned;
 				}
 			}
 		}
@@ -457,13 +427,13 @@ async function reloadDiscordJSON() {
 		clearEmpties(metadata);
 	})();
 
-	fs.writeJSON('./database/discord.json', database, { spaces: '\t' });
+	fs.writeJSON('./database/discord.json', database.discord, { spaces: '\t' });
 }
 
 process.on('exit', (code) => {
 	console.log('Exiting...');
 	clearEmpties(database);
-	fs.writeJSONSync('./database/discord.json', database, { spaces: '\t' });
+	fs.writeJSONSync('./database/discord.json', database.discord, { spaces: '\t' });
 	console.log('Saved discord.json!');
 });
 

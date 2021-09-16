@@ -1,0 +1,166 @@
+{
+    "activations": 26,
+    "lastActivation": "2021-08-09",
+    "totalRegisteredCommands": 354,
+    "ticketMessages": {
+        "866293305787809802": {
+            "id": "866293305787809802",
+            "description": "Thanks for participating in this challenge! Send your code and staff will rate it soon.",
+            "channel": "866293305787809802"
+        },
+        "854967146244997140": {
+            "id": "854967146244997140",
+            "description": "Staff will be here soon! Be patient, check back in a few hours. While you're waiting, give some details about your server and maybe a few screenshots. Read the announcements for some conditions.",
+            "channel": "854840866653208608"
+        },
+        "855588971455578112": {
+            "id": "855588971455578112",
+            "description": "When you're finished the challenge, ping a staff member so they can check. Don't forget to include screenshots and source code!",
+            "channel": "855110846328864828"
+        },
+        "857632770565865483": {
+            "id": "857632770565865483",
+            "description": "Thanks for doing this challenge! Send your code and staff will be here soon.",
+            "channel": "855110846328864828"
+        },
+        "860279978368827413": {
+            "id": "860279978368827413",
+            "description": "Beep boop",
+            "channel": "854949456108453908"
+        },
+        "860280122657472534": {
+            "id": "860280122657472534",
+            "description": "Hey!",
+            "channel": "854949456108453908"
+        },
+        "860289917242703919": {
+            "id": "860289917242703919",
+            "description": "def",
+            "channel": "854949456108453908"
+        },
+        "860290228194246667": {
+            "id": "860290228194246667",
+            "description": "def",
+            "channel": "854949456108453908"
+        },
+        "860290374072664104": {
+            "id": "860290374072664104",
+            "description": "def",
+            "channel": "854949456108453908"
+        },
+        "860290821182324760": {
+            "id": "860290821182324760",
+            "description": "def",
+            "channel": "854949456108453908"
+        },
+        "860290910754570250": {
+            "id": "860290910754570250",
+            "description": "abc",
+            "channel": "854949456108453908"
+        },
+        "860291857292591154": {
+            "id": "860291857292591154",
+            "description": "Thanks for doing this challenge! Send your code and staff will be here soon.",
+            "channel": "854949456108453908"
+        },
+        "860292214839443466": {
+            "id": "860292214839443466",
+            "description": "Thanks for doing this challenge! Send your code and staff will be here soon.",
+            "channel": "854949456108453908"
+        },
+        "860292448165429278": {
+            "id": "860292448165429278",
+            "description": "Thanks for doing this challenge! Send your code and staff will be here soon.",
+            "channel": "854949456108453908"
+        },
+        "860292559582920754": {
+            "id": "860292559582920754",
+            "description": "Thanks for doing this challenge! Send your code and staff will be here soon.",
+            "channel": "855110846328864828"
+        },
+        "860661133182107678": {
+            "id": "860661133182107678",
+            "description": "wow",
+            "channel": "857631230089363507"
+        },
+        "868553530322075719": {
+            "id": "868553530322075719",
+            "description": "Send your code here!",
+            "channel": "868552974039916605"
+        },
+        "871627267506319420": {
+            "id": "871627267506319420",
+            "description": "Thanks for doing this challenge! Send your code and staff will be here soon.",
+            "channel": "871626157248897074"
+        }
+    },
+    "totalTickets": 143,
+    "guilds": {
+        "854838419677904906": {
+            "members": {
+                "250747216086564866": {
+                    "colourRole": "857396679518584842"
+                },
+                "722898458020937769": {
+                    "colourRole": "860047427510861855"
+                },
+                "221659737249415171": {
+                    "colourRole": "859565406850121758"
+                },
+                "585019061193146368": {
+                    "colourRole": "859565750628384770"
+                },
+                "513699276644417536": {
+                    "colourRole": "860030026996121621"
+                }
+            },
+            "message_logs": "858534764331008000"
+        }
+    },
+    "reactionRoleMessages": {
+        "858847477208842281": {
+            "id": "858847477208842281",
+            "emotes": {
+                "⭐": {
+                    "id": "858847477208842281",
+                    "channel": "854840866653208608",
+                    "guild": "854838419677904906",
+                    "role": "858844163919446027"
+                }
+            }
+        },
+        "854842394351370260": {
+            "id": "854842394351370260",
+            "emotes": {
+                "✅": {
+                    "id": "854842394351370260",
+                    "channel": "854839564181700608",
+                    "guild": "854838419677904906",
+                    "role": "860242610613911553"
+                }
+            }
+        },
+        "860292559582920754": {
+            "id": "860292559582920754",
+            "emotes": {
+                "📰": {
+                    "id": "860292559582920754",
+                    "channel": "855110846328864828",
+                    "guild": "854838419677904906",
+                    "role": "857817642655940659"
+                }
+            }
+        },
+        "864999854132166686": {
+            "id": "864999854132166686",
+            "emotes": {
+                "🏅": {
+                    "id": "864999854132166686",
+                    "channel": "854840866653208608",
+                    "guild": "854838419677904906",
+                    "role": "857817642655940659"
+                }
+            }
+        }
+    }
+}
