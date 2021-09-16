@@ -46,23 +46,7 @@ global.database = fs.readJSONSync('./database/main.json');
 
 global.metadata = {};
 
-/**
- * Color constant for simple colours
-**/
-const Color = {
-	RED: '#ff0000',
-	YELLOW: '#ffff00',
-	GREEN: '#00ff00',
-	SKRIPTHUB: {
-		EVENTS: '#a763ff',
-		CONDITIONS: '#ff3d3d',
-		EFFECTS: '#0178ff',
-		EXPRESSIONS: '#0de505',
-		TYPES: '#f39c12',
-		FUNCTIONS: '#b4b4b4'
-	}
-}
-global.Color = Color;
+const Color = require(`./lib/constants/Color.js`);
 
 /**
  * Gets the application of the Discord client in a specific guild.
@@ -284,25 +268,6 @@ const getCodeBlock = (string, format = 'vb') => `\`\`\`${format}\n${string}\`\`\
 console.log('hello');
 client.on('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`);
-
-	global.permissionMessage = `You don't have permission to do this!`;
-	global.guildId = "854838419677904906";
-	global.guild = client.guilds.cache.get(guildId);
-	global.skripter = "860242610613911553";
-	global.skripthut = "https://i.imgur.com/jumFMJ5.png";
-	global.tickets = "854954327268786227";
-
-	SkriptDocs = {
-		SkUnityAPIKey: "58b93076b6269edd",
-		SkriptHubAPIVersion: "v1",
-		SkriptHubAPIKey: "019e6835c735556d3c42492ed59493e84d197a97",
-	}
-	SkriptDocs.SkriptHubAPIAuth = {
-		headers: {
-			Authorization: `Token ${SkriptDocs.SkriptHubAPIKey}` 
-		}
-	}
-	noResults = "https://i.imgur.com/AjlWaz5.png";
 
 	await registerCommands(guild).catch(console.error);
 
