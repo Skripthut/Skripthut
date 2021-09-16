@@ -50,6 +50,7 @@ const metadata = {};
 global.metadata = metadata;
 
 const Color = require(`./lib/constants/Color.js`);
+const { guild } = require(`../constants/General.js`);
 
 /**
  * Gets the application of the Discord client in a specific guild.
