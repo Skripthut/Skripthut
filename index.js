@@ -371,14 +371,14 @@ function getRandomInt(min, max) {
 }
 
 let now = (new Date).toISOString().substr(0, 10);
-if (database.discord.lastActivation !== now) {
-	database.discord.activations = 0;
+if (database.lastActivation !== now) {
+	database.activations = 0;
 }
 
-database.discord.lastActivation = now;
-database.discord.activations++;
+database.lastActivation = now;
+database.activations++;
 
-/*var access = fs.createWriteStream(`./logs/${now}**${database.discord.activations}.stdout`);
+/*var access = fs.createWriteStream(`./logs/${now}**${database.activations}.stdout`);
 process.stdout.write = process.stderr.write = access.write.bind(access);
 
 process.on('uncaughtException', function(err) {
@@ -427,13 +427,13 @@ async function reloadDiscordJSON() {
 		clearEmpties(metadata);
 	})();
 
-	fs.writeJSON('./database/discord.json', database.discord, { spaces: '\t' });
+	fs.writeJSON('./database/discord.json', database, { spaces: '\t' });
 }
 
 process.on('exit', (code) => {
 	console.log('Exiting...');
 	clearEmpties(database);
-	fs.writeJSONSync('./database/discord.json', database.discord, { spaces: '\t' });
+	fs.writeJSONSync('./database/discord.json', database, { spaces: '\t' });
 	console.log('Saved discord.json!');
 });
 
