@@ -236,7 +236,7 @@ async function getPunishmentDetails(millisTimespan) {
 
 	var milliseconds = timespan;
 
-	/** @type {string[]} **/
+	/** @type {string[]} */
 	var time = [];
 	for (const key of Object.keys(millis).reverse()) {
 		var milliValue = Math.floor(timespan / millis[key][1]);
@@ -355,7 +355,7 @@ async function reloadDiscordJSON() {
 	var now = Date.now();
 	Object.keys(database.discord.guilds).forEach(async (guildId) => {
 		var guildData = database.discord.guilds[guildId];
-		/** @type {Discord.Guild} **/
+		/** @type {Discord.Guild} */
 		var guild = client.guilds.cache.get(guildId);
 		var bans = await client.guilds.cache.get(guildId).bans.fetch();
 		for (const banInfo of bans) {

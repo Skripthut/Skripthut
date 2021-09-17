@@ -10,7 +10,7 @@ function recursivelyFormatOptions(options, object) {
 	for (const option of options) {
 		const { name, type } = option;
 
-		/** The proper property name for the option type **/
+		/** The proper property name for the option type */
 		const value = ((type === "MENTIONABLE") ? (option.member ?? option.role) : option[{
 			USER: 'member',
 			CHANNEL: 'channel',
