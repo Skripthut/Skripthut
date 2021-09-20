@@ -37,6 +37,7 @@ const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /
 global.client = client;
 
 const database = require(`./database/database.js`);
+const { metadata } = require(`./lib/methods/metadata.js`);
 
 const events = require(`./lib/events.js`);
 
