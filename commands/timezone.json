@@ -1,12 +1,12 @@
 {
-    "name": "timezone",
-    "description": "State your timezone so we know what time is best for you!",
-    "options": [
-        {
-            "type": "STRING",
-            "name": "timezone",
-            "description": "What your timezone is (EST, UTC/GMT, WST, etc.)",
-            "required": true
-        }
-    ]
+	"name": "timezone",
+	"description": "State your timezone so we know what time is best for you!",
+	"options": [
+		{
+			"type": "STRING",
+			"name": "timezone",
+			"description": "What your timezone is (EST, UTC/GMT, WST, etc.)",
+			"required": true
+		}
+	]
 }

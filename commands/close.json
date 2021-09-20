@@ -1,5 +1,5 @@
 {
-    "name": "close",
-    "description": "Close your current ticket channel",
-    "options": []
+	"name": "close",
+	"description": "Close your current ticket channel",
+	"options": []
 }

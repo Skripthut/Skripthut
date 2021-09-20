@@ -4,7 +4,7 @@
   "description": "kool package",
   "main": "index.js",
   "scripts": {
-    "start": "bash start.sh"
+	  "start": "bash start.sh"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +17,7 @@
     "html-entities": "^2.3.2",
     "jsdoc": "^3.6.7",
     "lodash": "^4.17.21",
-    "node": "^14.17.4"
+    "node": "^14.17.4",
+    "my-database": "file:./database/database.js"
   }
 }

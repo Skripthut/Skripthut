@@ -36,11 +36,7 @@ global._ = require(`lodash`);
 const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /* All Intents */ });
 global.client = client;
 
-const database = fs.readJSONSync('./database/main.json');
-global.database = database;
-
-const metadata = {};
-global.metadata = metadata;
+const database = require(`./database/database.js`);
 
 const events = require(`./lib/events.js`);
 

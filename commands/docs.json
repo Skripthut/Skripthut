@@ -1,28 +1,28 @@
 {
-    "name": "docs",
-    "description": "Search the skUnity docs",
-    "options": [
-        {
-            "type": "STRING",
-            "name": "query",
-            "description": "The search query (i.e. \"kill from:skript type:effect\")",
-            "required": true
-        },
-        {
-            "type": "STRING",
-            "name": "api",
-            "description": "Which docs API to use (defaults to skUnity)",
-            "required": false,
-            "choices": [
-                {
-                    "name": "skUnity Docs v2",
-                    "value": "skUnity"
-                },
-                {
-                    "name": "SkriptHub Docs v1",
-                    "value": "SkriptHub"
-                }
-            ]
-        }
-    ]
+	"name": "docs",
+	"description": "Search the skUnity docs",
+	"options": [
+		{
+			"type": "STRING",
+			"name": "query",
+			"description": "The search query (i.e. \"kill from:skript type:effect\")",
+			"required": true
+		},
+		{
+			"type": "STRING",
+			"name": "api",
+			"description": "Which docs API to use (defaults to skUnity)",
+			"required": false,
+			"choices": [
+				{
+					"name": "skUnity Docs v2",
+					"value": "skUnity"
+				},
+				{
+					"name": "SkriptHub Docs v1",
+					"value": "SkriptHub"
+				}
+			]
+		}
+	]
 }

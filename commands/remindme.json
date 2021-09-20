@@ -1,32 +1,32 @@
 {
-    "name": "remindme",
-    "description": "Send a reminder at a certain date or after a certain timespan",
-    "options": [
-        {
-            "type": "SUB_COMMAND",
-            "name": "in",
-            "description": "Send the reminder after a certain timespan",
-            "options": [
-                {
-                    "type": "STRING",
-                    "name": "timespan",
-                    "description": "How long later to send the reminder",
-                    "required": true
-                }
-            ]
-        },
-        {
-            "type": "SUB_COMMAND",
-            "name": "at",
-            "description": "Send the reminder at a certain date",
-            "options": [
-                {
-                    "type": "STRING",
-                    "name": "date",
-                    "description": "A date (type \"help\" for date format)",
-                    "required": true
-                }
-            ]
-        }
-    ]
+	"name": "remindme",
+	"description": "Send a reminder at a certain date or after a certain timespan",
+	"options": [
+		{
+			"type": "SUB_COMMAND",
+			"name": "in",
+			"description": "Send the reminder after a certain timespan",
+			"options": [
+				{
+					"type": "STRING",
+					"name": "timespan",
+					"description": "How long later to send the reminder",
+					"required": true
+				}
+			]
+		},
+		{
+			"type": "SUB_COMMAND",
+			"name": "at",
+			"description": "Send the reminder at a certain date",
+			"options": [
+				{
+					"type": "STRING",
+					"name": "date",
+					"description": "A date (type \"help\" for date format)",
+					"required": true
+				}
+			]
+		}
+	]
 }

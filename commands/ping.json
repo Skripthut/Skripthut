@@ -1,5 +1,5 @@
 {
-    "name": "ping",
-    "description": "Replies with Pong!",
-    "options": []
+	"name": "ping",
+	"description": "Replies with Pong!",
+	"options": []
 }

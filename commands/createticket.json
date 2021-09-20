@@ -1,24 +1,24 @@
 {
-    "name": "createticket",
-    "description": "Create a ticket message in specified channel with specified description",
-    "options": [
-        {
-            "type": "CHANNEL",
-            "name": "channel",
-            "description": "The channel you want to send the ticket message to",
-            "required": true
-        },
-        {
-            "type": "STRING",
-            "name": "message",
-            "description": "The message you want to send to the channel",
-            "required": true
-        },
-        {
-            "type": "STRING",
-            "name": "description",
-            "description": "The description of the ticket (is sent when ticket is created)",
-            "required": true
-        }
-    ]
+	"name": "createticket",
+	"description": "Create a ticket message in specified channel with specified description",
+	"options": [
+		{
+			"type": "CHANNEL",
+			"name": "channel",
+			"description": "The channel you want to send the ticket message to",
+			"required": true
+		},
+		{
+			"type": "STRING",
+			"name": "message",
+			"description": "The message you want to send to the channel",
+			"required": true
+		},
+		{
+			"type": "STRING",
+			"name": "description",
+			"description": "The description of the ticket (is sent when ticket is created)",
+			"required": true
+		}
+	]
 }

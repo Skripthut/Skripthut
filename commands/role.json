@@ -1,69 +1,69 @@
 {
-    "name": "role",
-    "description": "Obtain information about all/specific roles, or manage the roles of a member",
-    "options": [
-        {
-            "type": "SUB_COMMAND",
-            "name": "roles",
-            "description": "List all the guild's roles",
-            "options": [
-                {
-                    "type": "ROLE",
-                    "name": "role",
-                    "description": "List all the details of the specified role",
-                    "required": false
-                }
-            ]
-        },
-        {
-            "type": "SUB_COMMAND",
-            "name": "grant",
-            "description": "Give a role to the member",
-            "options": [
-                {
-                    "type": "USER",
-                    "name": "member",
-                    "description": "The member whom you want to add the role to",
-                    "required": true
-                },
-                {
-                    "type": "ROLE",
-                    "name": "role",
-                    "description": "The role you want to give to the member",
-                    "required": true
-                },
-                {
-                    "type": "STRING",
-                    "name": "reason",
-                    "description": "The reason why you granted this role (defaults to \"Granted by [Your Tag]\")",
-                    "required": false
-                }
-            ]
-        },
-        {
-            "type": "SUB_COMMAND",
-            "name": "revoke",
-            "description": "Remove a role from the member",
-            "options": [
-                {
-                    "type": "USER",
-                    "name": "member",
-                    "description": "The member whom you want to remove the role from",
-                    "required": true
-                },
-                {
-                    "type": "ROLE",
-                    "name": "role",
-                    "description": "The role you want to remove from the member",
-                    "required": true
-                },
-                {
-                    "type": "STRING",
-                    "name": "reason",
-                    "description": "The reason why you removed this role (defaults to \"Removed by [Your Tag]\")",
-                    "required": false
-                }
-            ]
-        }
-    ]
+	"name": "role",
+	"description": "Obtain information about all/specific roles, or manage the roles of a member",
+	"options": [
+		{
+			"type": "SUB_COMMAND",
+			"name": "roles",
+			"description": "List all the guild's roles",
+			"options": [
+				{
+					"type": "ROLE",
+					"name": "role",
+					"description": "List all the details of the specified role",
+					"required": false
+				}
+			]
+		},
+		{
+			"type": "SUB_COMMAND",
+			"name": "grant",
+			"description": "Give a role to the member",
+			"options": [
+				{
+					"type": "USER",
+					"name": "member",
+					"description": "The member whom you want to add the role to",
+					"required": true
+				},
+				{
+					"type": "ROLE",
+					"name": "role",
+					"description": "The role you want to give to the member",
+					"required": true
+				},
+				{
+					"type": "STRING",
+					"name": "reason",
+					"description": "The reason why you granted this role (defaults to \"Granted by [Your Tag]\")",
+					"required": false
+				}
+			]
+		},
+		{
+			"type": "SUB_COMMAND",
+			"name": "revoke",
+			"description": "Remove a role from the member",
+			"options": [
+				{
+					"type": "USER",
+					"name": "member",
+					"description": "The member whom you want to remove the role from",
+					"required": true
+				},
+				{
+					"type": "ROLE",
+					"name": "role",
+					"description": "The role you want to remove from the member",
+					"required": true
+				},
+				{
+					"type": "STRING",
+					"name": "reason",
+					"description": "The reason why you removed this role (defaults to \"Removed by [Your Tag]\")",
+					"required": false
+				}
+			]
+		}
+	]
 }

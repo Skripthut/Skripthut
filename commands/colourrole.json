@@ -1,24 +1,24 @@
 {
-    "name": "colourrole",
-    "description": "Base command for colour role management",
-    "options": [
-        {
-            "type": "SUB_COMMAND",
-            "name": "create",
-            "description": "Create a colour role with a chosen HEX code",
-            "options": [
-                {
-                    "type": "STRING",
-                    "name": "colour",
-                    "description": "Your chosen colour's HEX code",
-                    "required": true
-                }
-            ]
-        },
-        {
-            "type": "SUB_COMMAND",
-            "name": "remove",
-            "description": "Remove your current colour role"
-        }
-    ]
+	"name": "colourrole",
+	"description": "Base command for colour role management",
+	"options": [
+		{
+			"type": "SUB_COMMAND",
+			"name": "create",
+			"description": "Create a colour role with a chosen HEX code",
+			"options": [
+				{
+					"type": "STRING",
+					"name": "colour",
+					"description": "Your chosen colour's HEX code",
+					"required": true
+				}
+			]
+		},
+		{
+			"type": "SUB_COMMAND",
+			"name": "remove",
+			"description": "Remove your current colour role"
+		}
+	]
 }

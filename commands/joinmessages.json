@@ -1,37 +1,50 @@
 {
-    "name": "joinmessages",
-    "description": "General join messages moderation of the server",
-    "options": [
-        {
-            "type": "SUB_COMMAND",
-            "name": "add",
-            "description": "Add messages to the server's join messages (separate by \"|\")",
-            "options": [
-                {
-                    "type": "STRING",
-                    "name": "message",
-                    "description": "The message to add",
-                    "required": false
-                }
-            ]
-        },
-        {
-            "type": "SUB_COMMAND",
-            "name": "remove",
-            "description": "Remove a join message using ID",
-            "options": [
-                {
-                    "type": "INTEGER",
-                    "name": "id",
-                    "description": "The ID of the join message (use ID, execute \"/joinmessages\" to see ID's)",
-                    "required": false
-                }
-            ]
-        },
-        {
-            "type": "SUB_COMMAND",
-            "name": "list",
-            "description": "List all server's join messages"
-        }
-    ]
+	"name": "joinmessages",
+	"description": "General join messages moderation of the server",
+	"options": [
+		{
+			"type": "SUB_COMMAND",
+			"name": "set",
+			"description": "Set the join messages channel of the server",
+			"options": [
+				{
+					"type": "STRING",
+					"name": "id",
+					"description": "The ID of the target channel (leave empty to delete)",
+					"required": false
+				}
+			]
+		},
+		{
+			"type": "SUB_COMMAND",
+			"name": "add",
+			"description": "Add messages to the server's join messages (separate by \"|\")",
+			"options": [
+				{
+					"type": "STRING",
+					"name": "message",
+					"description": "The message to add",
+					"required": true
+				}
+			]
+		},
+		{
+			"type": "SUB_COMMAND",
+			"name": "remove",
+			"description": "Remove a join message using ID",
+			"options": [
+				{
+					"type": "INTEGER",
+					"name": "id",
+					"description": "The ID of the join message (execute \"/joinmessages list\" to see ID's)",
+					"required": true
+				}
+			]
+		},
+		{
+			"type": "SUB_COMMAND",
+			"name": "list",
+			"description": "List all server's join messages"
+		}
+	]
 }
