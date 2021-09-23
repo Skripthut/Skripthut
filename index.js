@@ -33,6 +33,9 @@ const Discord = require(`discord.js`);
 const fs = require(`fs-extra`);
 global._ = require(`lodash`);
 
+const intentLength = Object.keys(Discord.Intents.FLAGS).length;
+for (let i = 0; i <= intentLength; i++) { intentsField += 1 << i; }
+
 const client = new Discord.Client({ intents: new Discord.Intents(intentsField) /* All Intents */ });
 global.client = client;
 
@@ -41,8 +44,6 @@ const database = require(`./database/database.js`);
 const events = require(`./lib/events.js`);
 
 var intentsField = 0;
-const intentLength = Object.keys(Discord.Intents.FLAGS).length;
-for (let i = 0; i <= intentLength; i++) { intentsField += 1 << i; }
 
 const Color = require(`./lib/constants/Color.js`);
 const { guild } = require(`./lib/constants/General.js`);
@@ -148,7 +149,8 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 				const name = command.name;
 				if (!commandNames.includes(name)) {
 					console.log(`delete unset ${name}`);
-					getApp(guildId).commands(command.id).delete();
+					(await appCommands.fetch(command.id)).delete();````````````````````
+					
 					newAppCommandsArray.splice(i, 1);
 				}
 			}
