@@ -173,50 +173,6 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 	return true;
 }
 
-let millis = {};
-millis.seconds = [ 's', 1000 ];
-millis.minutes = [ 'm', millis.seconds[1] * 60 ];
-millis.hours = [ 'h', millis.minutes[1] * 60 ];
-millis.days = [ 'd', millis.hours[1] * 24 ];
-millis.years = [ 'y', millis.days[1] * 365 ];
-
-let timespanRegex = {};
-for (const key of Object.keys(millis)) {
-	timespanRegex[key] = RegExp(`[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+) *${millis[key][0]}`, 'gi');
-}
-
-/**
- * Get millis from a formatted string:
- * 
- * { /\ds/: seconds, /\dm/: minutes, /\dh/: hours, /\dd/: days, /\dy/: years }
- * 
- * @param {string} string The formatted string to parse
- * @returns Returns millis from formatted string
- * @example
- * let oneYearTwoDaysThreeSeconds = getMillisFromString('2d1y3s'); // 
-**/
-async function getMillisFromString(string) {
-	if (!string) { return null; }
-	let millisTimespan = 0;
-
-	let key;
-	const addMillis = (timespan) => {
-		millisTimespan += parseFloat(timespan[1]) * millis[key][1];
-	}
-	
-	for (key of Object.keys(timespanRegex)) {
-		[ ...string.matchAll(timespanRegex[key]) ].forEach(addMillis);
-	}
-	return millisTimespan;
-}
-
-/**
- * Checks if a string is empty or not set.
- * 
- * @param {string} string The string to check
-**/
-const isEmpty = (string) => (string === undefined || string === '');
-
 console.log('hello');
 client.on('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`);
