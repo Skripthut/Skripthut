@@ -4,3 +4,4 @@ main.json
 **/nvm
 package-lock.json
 .replit
+.vscode

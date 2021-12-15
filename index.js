@@ -3,14 +3,6 @@
 Object.defineProperty(Object.prototype, '_object', { get: function() { return this; } });
 
 /**
- * Returns the logarithm of a number with a specified base, defaulting to E.
- * 
- * @param {number} argument The argument of the logarithm
- * @param base The base of the logarithm
-**/
-const log = (argument, base = Math.E) => (base === Math.E) ? Math.log(argument) : Math.log(argument) / Math.log(base);
-
-/**
  * Returns a number limited between the specified minimum and maximum.
  * 
  * @param {number} number The desired number to limit
@@ -35,7 +27,7 @@ const fs = require(`fs-extra`);
 global._ = require(`lodash`);
 
 const database = require(`./database/database.js`);
-const { metadata } = require(`./lib/methods/metadata.js`);
+const { metadata } = require(`./lib/util/Metadata.js`);
 
 const events = require(`./lib/events.js`);
 
@@ -67,7 +59,7 @@ async function deleteCommands(guildId) {
 	const awaitCommands = await commands.get();
 	for (const command of awaitCommands) {
 		console.log('deleting', command.name)
-		var deleteCommand = getApp(guildId).commands(command.id);
+		let deleteCommand = getApp(guildId).commands(command.id);
 		await deleteCommand.delete();
 	}
 	console.log('deleted all commands!');
@@ -88,10 +80,10 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 	const appCommands = guild.commands;
 
 	if (ignoreSame || fixJSON || deleteUnset) {
-		var dynamicProperties = [ 'id', 'applicationId', 'version', 'guild', 'guildId', 'permissions', 'defaultPermission' ];
-		var appCommandsArray = await appCommands.fetch();
+		let dynamicProperties = [ 'id', 'applicationId', 'version', 'guild', 'guildId', 'permissions', 'defaultPermission' ];
+		let appCommandsArray = await appCommands.fetch();
 		
-		var registeredCommands = {};
+		let registeredCommands = {};
 		for (const appCommand of appCommandsArray) {
 			const applicationCommand = appCommand[1];
 			dynamicProperties.forEach((key) => delete applicationCommand[key]);
@@ -99,8 +91,8 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 		}
 		
 		if (Object.keys(registeredCommands)) {
-			var entries = Object.entries(registeredCommands).filter(() => true);
-			var isCommandSet = function(command) {
+			let entries = Object.entries(registeredCommands).filter(() => true);
+			let isCommandSet = function(command) {
 				for (let i = entries.length - 1; i > -1; i--) {
 			   		const entry = entries[i];
 					if (JSON.stringify(command) === JSON.stringify(entry[1])) {
@@ -113,14 +105,14 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 		}
 	}
 
-	var commands = [];
-	var commandNames = [];
-	var localCommands = fs.readdir('./commands');
+	let commands = [];
+	let commandNames = [];
+	let localCommands = fs.readdir('./commands');
 	await localCommands.then(async (localCommands) => {
 		for (const command of localCommands) {
 			const commandData = fs.readJSONSync(`./commands/${command}`);
-			commands = [ ...commands, commandData ];
-			commandNames[command.substr(0, (command.length - 4))] = commandData.name;
+			commands.push(commandData);
+			commandNames[command.substring(0, (command.length - 4))] = commandData.name;
 		}
 	});
 	
@@ -171,7 +163,7 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 			}
 			
 			for (const [ key, value ] of entries) {
-				var name = value.name;
+				let name = value.name;
 				fixCommandJSON(name);
 			}
 			console.log(`fixed all command json!`);
@@ -181,14 +173,14 @@ async function registerCommands(guild, ignoreSame = true, fixJSON = true, delete
 	return true;
 }
 
-var millis = {};
+let millis = {};
 millis.seconds = [ 's', 1000 ];
 millis.minutes = [ 'm', millis.seconds[1] * 60 ];
 millis.hours = [ 'h', millis.minutes[1] * 60 ];
 millis.days = [ 'd', millis.hours[1] * 24 ];
 millis.years = [ 'y', millis.days[1] * 365 ];
 
-var timespanRegex = {};
+let timespanRegex = {};
 for (const key of Object.keys(millis)) {
 	timespanRegex[key] = RegExp(`[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+) *${millis[key][0]}`, 'gi');
 }
@@ -196,16 +188,16 @@ for (const key of Object.keys(millis)) {
 /**
  * Get millis from a formatted string:
  * 
- * { [x]s - seconds, [x]m - minutes, [x]h - hours, [x]d - days, [x]y - years } where [x] is any number
+ * { /\ds/: seconds, /\dm/: minutes, /\dh/: hours, /\dd/: days, /\dy/: years }
  * 
  * @param {string} string The formatted string to parse
  * @returns Returns millis from formatted string
  * @example
- * var oneYearTwoDaysThreeSeconds = getMillisFromString('2d1y3s'); // 
+ * let oneYearTwoDaysThreeSeconds = getMillisFromString('2d1y3s'); // 
 **/
 async function getMillisFromString(string) {
 	if (!string) { return null; }
-	var millisTimespan = 0;
+	let millisTimespan = 0;
 
 	let key;
 	const addMillis = (timespan) => {
@@ -219,48 +211,11 @@ async function getMillisFromString(string) {
 }
 
 /**
- * @param {number} millisTimespan The length of the punishment in milliseconds
- * @returns Returns an object containing the total milliseconds of the formatted timespan, and a readable timespan using said milliseconds
-**/
-async function getPunishmentDetails(millisTimespan) {
-	if (!millisTimespan) { return null; }
-	var now = Date.now();
-	var timespan = await getMillisFromString(millisTimespan);
-	if (timespan === Infinity || timespan === NaN) { return null; }
-
-	var milliseconds = timespan;
-
-	/** @type {string[]} */
-	var time = [];
-	for (const key of Object.keys(millis).reverse()) {
-		var milliValue = Math.floor(timespan / millis[key][1]);
-		if (milliValue) { time = [ ... time, `${milliValue} ${milliValue === 1 ? key.substr(0, key.length - 1) : key}` ]; }
-		timespan -= milliValue * millis[key][1];
-	}
-
-	return {
-		now: now,
-		milliseconds: milliseconds,
-		readableTimespan: time.join(", "),
-		endDate: (milliseconds) ? new Date(now + milliseconds) : null
-	};
-}
-
-/**
- * Checks if a string is empty or not set
+ * Checks if a string is empty or not set.
  * 
  * @param {string} string The string to check
 **/
 const isEmpty = (string) => (string === undefined || string === '');
-
-/**
- * Cover a text with a markdown code block
- * 
- * @param {string} string The text to put in the code block
- * @param format The markdown code format for the code block (defaults to 'vb')
- * @returns The code block with `string` inside it
-**/
-const getCodeBlock = (string, format = 'vb') => `\`\`\`${format}\n${string}\`\`\``;
 
 console.log('hello');
 client.on('ready', async () => {
@@ -300,25 +255,15 @@ client.on('ready', async () => {
 /**
  * Returns a pseudorandom float between a minimum and maximum range.
  *
- * @param {number} min The minimum number to get a random number between.
- * @param {number} max The maximum number to get a random number between.
- * @returns {number} The pseudorandom float between `min` and `max`.
+ * @param {number} min The minimum number to get a random number between
+ * @param {number} max The maximum number to get a random number between
+ * @returns {number} The pseudorandom float between `min` and `max`
 **/
 function getRandom(min, max) {
 	return min + Math.random() * max;
 }
-/**
- * Returns a pseudorandom integer between a minimum and maximum range.
- *
- * @param {number} min The minimum number to get a random integer between.
- * @param {number} max The maximum number to get a random integer between.
- * @returns {number} The pseudorandom integer between `min` and `max`.
-**/
-function getRandomInt(min, max) {
-	return Math.round(getRandom(min, max));
-}
 
-let now = (new Date).toISOString().substr(0, 10);
+let now = (new Date).toISOString().substring(0, 10);
 if (database.lastActivation !== now) {
 	database.activations = 0;
 }
@@ -326,7 +271,7 @@ if (database.lastActivation !== now) {
 database.lastActivation = now;
 database.activations++;
 
-/*var access = fs.createWriteStream(`./logs/${now}**${database.activations}.stdout`);
+/*let access = fs.createWriteStream(`./logs/${now}**${database.activations}.stdout`);
 process.stdout.write = process.stderr.write = access.write.bind(access);
 
 process.on('uncaughtException', function(err) {
@@ -338,7 +283,7 @@ client.on('guildBanRemove', async (ban) => {
 });
 
 function clearEmpties(object) {
-	for (var key in object) {
+	for (let key in object) {
 		if (!object[key] || typeof object[key] !== "object") { continue; }
 		clearEmpties(object[key]);
 		if (!Object.keys(object[key]).length) { delete object[key]; }
@@ -346,19 +291,19 @@ function clearEmpties(object) {
 }
 
 async function reloadDiscordJSON() {
-	var now = Date.now();
+	let now = Date.now();
 	Object.keys(database.discord.guilds).forEach(async (guildId) => {
-		var guildData = database.discord.guilds[guildId];
+		let guildData = database.discord.guilds[guildId];
 		/** @type {Discord.Guild} */
-		var guild = client.guilds.cache.get(guildId);
-		var bans = await client.guilds.cache.get(guildId).bans.fetch();
+		let guild = client.guilds.cache.get(guildId);
+		let bans = await client.guilds.cache.get(guildId).bans.fetch();
 		for (const banInfo of bans) {
-			var userId = banInfo[1].user.id;
-			var banned = guildData.members?.[userId]?.banned;
+			let userId = banInfo[1].user.id;
+			let banned = guildData.members?.[userId]?.banned;
 			if (banned) {
-				var banTime = banned.banTime;
-				var banDate = banned.banDate;
-				var moderator = client.users.cache.get(banned.moderator);
+				let banTime = banned.banTime;
+				let banDate = banned.banDate;
+				let moderator = client.users.cache.get(banned.moderator);
 				if (banDate + banTime <= now) {
 					await guild.members.unban(userId, `Temporary ban ran out (${moderator.tag})`);
 					delete database.discord.guilds[guildId].members[userId].banned;
