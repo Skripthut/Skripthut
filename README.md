@@ -15,4 +15,4 @@ Local command JSON is fixed on register.
 - Finish /mute Command — MEDIUM
 - Add SkriptHub Docs API support for /docs — HIGH
 - Add /send Command — LOWEST
-- Replace /createticket Command with /ticket Command (add deletability etc.)
+- Replace /createticket Command with /ticket Command (add deletability etc.) — LOW
